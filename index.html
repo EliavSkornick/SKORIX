@@ -43,14 +43,12 @@
 <body class="min-h-screen p-4">
   <div class="max-w-3xl mx-auto">
     <h1 class="text-4xl font-bold text-yellow-400 mb-2">SkorChat 🦁</h1>
-    <p class="mb-6">העוזר החכם שלכם 
-  </p>
+    <p class="mb-6">העוזר החכם שלכם</p>
 
     <div class="bg-white bg-opacity-10 p-4 rounded-lg shadow-lg">
       <div id="chat-container" class="chat-container mb-4"></div>
       <div class="flex gap-2">
-        <input id="user-input" type="text" placeholder="כתוב כאן כל שאלה..."
-          class="flex-1 bg-white bg-opacity-20 rounded px-4 py-2" />
+        <input id="user-input" type="text" placeholder="כתוב כאן כל שאלה..." class="flex-1 bg-white bg-opacity-20 rounded px-4 py-2" />
         <button id="send-button" class="gold-button">שלח</button>
       </div>
     </div>
@@ -103,10 +101,18 @@
           },
           body: JSON.stringify({
             model: "gpt-3.5-turbo",
-            messages: [  
-  { role: "system", content: "אתה SkorChat – עוזר חכם בעברית שנבנה על ידי אליאב סקורניק. אינך ChatGPT. שמך SkorChat, אתה מדבר בצורה מנומסת, עמוקה וברורה, ועונה על כל שאלה ברצינות ובאחריות." },  
-  { role: "user", content: message }
-]
+            messages: [
+              {
+                role: "system",
+                content: "אתה SkorChat – עוזר חכם בעברית שנבנה על ידי אליאב סקורניק. אינך ChatGPT. שמך SkorChat, אתה מדבר בצורה מנומסת, עמוקה וברורה, ועונה על כל שאלה ברצינות ובאחריות."
+              },
+              {
+                role: "user",
+                content: message
+              }
+            ]
+          }),
+        });
 
         const data = await response.json();
 
