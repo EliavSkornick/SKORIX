@@ -103,10 +103,10 @@
           },
           body: JSON.stringify({
             model: "gpt-3.5-turbo",
-            messages: [
-             { role: "system", content: "אתה SkorChat – עוזר חכם בעברית שנבנה על ידי אליאב סקורניק. אינך ChatGPT. שמך SkorChat, אתה מדבר בצורה מנומסת, עמוקה וברורה, ועונה על כל שאלה ברצינות ובאחריות." },
-          }),
-        });
+            messages: [  
+  { role: "system", content: "אתה SkorChat – עוזר חכם בעברית שנבנה על ידי אליאב סקורניק. אינך ChatGPT. שמך SkorChat, אתה מדבר בצורה מנומסת, עמוקה וברורה, ועונה על כל שאלה ברצינות ובאחריות." },  
+  { role: "user", content: message }
+]
 
         const data = await response.json();
 
