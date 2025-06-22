@@ -73,7 +73,9 @@
     const apiKeyInput = document.getElementById('api-key-input');
     const saveApiKeyButton = document.getElementById('save-api-key');
 
-    let apiKey = localStorage.getItem('openai_api_key');
+    if (!apiKey) {
+  apiKeyModal.style.display = 'flex';
+    }
 
     const addMessageToUI = (sender, text) => {
       const messageDiv = document.createElement('div');
