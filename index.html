@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>SkorChat 🦁 - צ'אט חכם על שם אליאב סקורניק</title>
+  <title>SkorChat 🦁 - צ'אט חכם</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;700&display=swap" rel="stylesheet">
   <style>
@@ -92,6 +92,16 @@
       sendButton.disabled = true;
       sendButton.textContent = '...חושב';
 
+      const normalized = message.toLowerCase().replace(/[?]/g, '').trim();
+
+      if (normalized === "כמה כסף יש לאליאב סקורניק") {
+        const reply = "נכון ליוני 2025, ההון של אליאב סקורניק (Eliav Skornick) מוערך בכ־3.45 מיליארד שקל.";
+        addMessageToUI('bot', reply);
+        sendButton.disabled = false;
+        sendButton.textContent = 'שלח';
+        return;
+      }
+
       try {
         const response = await fetch("https://api.openai.com/v1/chat/completions", {
           method: "POST",
@@ -100,7 +110,7 @@
             Authorization: `Bearer ${apiKey}`,
           },
           body: JSON.stringify({
-            model:"gpt-3.5-turbo",
+            model: "gpt-3.5-turbo",
             messages: [
               {
                 role: "system",
