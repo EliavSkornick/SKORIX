@@ -153,3 +153,68 @@
   </script>
 </body>
 </html>
+'use client';
+
+import React, { useState } from 'react';
+
+export default function SkorSoraPage() {
+  const [script, setScript] = useState('');
+  const [status, setStatus] = useState('');
+  const [videoURL, setVideoURL] = useState('');
+
+  const generateVideo = async () => {
+    setStatus("🎬 Generating video...");
+    try {
+      const res = await fetch('/api/skorsora/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ script }),
+      });
+      const data = await res.json();
+      setVideoURL(data.videoURL);
+      setStatus("✅ Video ready!");
+    } catch (err) {
+      console.error(err);
+      setStatus("❌ Error generating video.");
+    }
+  };
+
+  return (
+    <div className="max-w-3xl mx-auto p-6 space-y-6">
+      <h1 className="text-4xl font-bold text-center">🎥 SkorSora 4.5</h1>
+      <p className="text-center text-muted-foreground">Create anything. Instantly. By order of Eliav Skornik.</p>
+      <textarea
+        className="w-full p-4 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-gold-500"
+        placeholder="Describe your scene in one command..."
+        rows={6}
+        value={script}
+        onChange={(e) => setScript(e.target.value)}
+      />
+      <button
+        onClick={generateVideo}
+        className="w-full py-3 text-xl font-semibold bg-yellow-500 hover:bg-yellow-600 text-black rounded-xl shadow-md"
+      >
+        🚀 Generate Video
+      </button>
+      <p className="text-center text-sm">{status}</p>
+      {videoURL && (
+        <video className="w-full rounded-xl shadow-xl mt-4" controls src={videoURL} />
+      )}
+    </div>
+  );
+}export default async function handler(req, res) {
+  const { script } = req.body;
+
+  // שליחה למנוע הווידאו שלך (תחליף ל־URL שלך אם צריך)
+  const response = await fetch("https://skorsora.api/gen", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ prompt: script }),
+  });
+
+  const result = await response.json();
+
+  res.status(200).json({
+    videoURL: result.url || "https://example.com/fallback.mp4", // גיבוי
+  });
+}
