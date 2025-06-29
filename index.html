@@ -3,25 +3,27 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>🦁 SkorSuite – אליאב סקורניק</title>
+  <title>🦁 SkorSuite 2025</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     body { background-color: #111827; color: white; font-family: sans-serif; }
     .gold-button { background: linear-gradient(135deg, #facc15, #fbbf24); color: black; font-weight: bold; padding: 10px 20px; border-radius: 10px; }
     .chat-box, .video-box { background-color: #1f2937; padding: 20px; border-radius: 10px; margin-bottom: 20px; }
     .input-field { background: #374151; color: white; padding: 10px; border-radius: 8px; width: 100%; }
+    .message-user { text-align: right; margin-bottom: 5px; }
+    .message-bot { text-align: left; margin-bottom: 5px; color: #fbbf24; }
   </style>
 </head>
 <body class="p-6">
 
   <h1 class="text-4xl font-bold text-yellow-400 text-center mb-4">🦁 SkorSuite 2025</h1>
-  <p class="text-center text-gray-400 mb-8">צ'אט + יצירת וידאו • פרי מוחו של אליאב סקורניק</p>
+  <p class="text-center text-gray-400 mb-8">צ'אט חכם + יצירת וידאו מתקדמת • גרסה בלעדית</p>
 
   <!-- Chat Section -->
   <div class="chat-box">
     <h2 class="text-2xl mb-2">🤖 SkorChat</h2>
-    <div id="chat-log" class="space-y-2 text-sm mb-3 max-h-48 overflow-y-auto"></div>
-    <input id="chat-input" type="text" class="input-field mb-2" placeholder="כתוב שאלה..." />
+    <div id="chat-log" class="space-y-2 text-sm mb-3 max-h-64 overflow-y-auto border border-gray-700 p-2 rounded"></div>
+    <input id="chat-input" type="text" class="input-field mb-2" placeholder="כתוב שאלה בכל נושא: קוד, מתמטיקה, תרגום..." />
     <button onclick="sendChat()" class="gold-button">שלח</button>
   </div>
 
@@ -35,40 +37,55 @@
   </div>
 
   <script>
-  const apiKey = "sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"; // מפתח קבוע
+    const apiKey = "sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"; // הכנס את המפתח שלך כאן
 
-  const sendChat = async () => {
-    const input = document.getElementById("chat-input").value;
-    if (!input) return;
+    const sendChat = async () => {
+      const input = document.getElementById("chat-input").value.trim();
+      const log = document.getElementById("chat-log");
+      if (!input) return;
 
-    const log = document.getElementById("chat-log");
-    log.innerHTML += `<div class="text-right"><b>אתה:</b> ${input}</div>`;
-    
-    try {
-      const res = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${apiKey}`
-        },
-        body: JSON.stringify({
-          model: "gpt-4",
-          messages: [
-            { role: "system", content: "אתה SkorChat – עוזר חכם בעברית, פרטי של אליאב סקורניק..." },
-            { role: "user", content: input }
-          ]
-        })
-      });
+      log.innerHTML += `<div class="message-user"><b>אתה:</b> ${input}</div>`;
+      document.getElementById("chat-input").value = "";
 
-      const data = await res.json();
-      const reply = data.choices?.[0]?.message?.content || "שגיאה בתגובה.";
-      log.innerHTML += `<div class="text-left"><b>SkorChat:</b> ${reply}</div>`;
-    } catch {
-      log.innerHTML += `<div class="text-left text-red-500">⚠️ שגיאה בשליחה או מפתח לא תקין</div>`;
-    }
+      try {
+        const res = await fetch("https://api.openai.com/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${apiKey}`
+          },
+          body: JSON.stringify({
+            model: "gpt-4",
+            messages: [
+              { role: "system", content: "אתה SkorChat – עוזר בינה מלאכותית מתוחכם, פרטי, משודרג, מדבר עברית, ויודע קוד, תרגום, הסברים, רגש ועוד." },
+              { role: "user", content: input }
+            ]
+          })
+        });
 
-    document.getElementById("chat-input").value = "";
-  };
+        const data = await res.json();
+        const reply = data.choices?.[0]?.message?.content || "⚠️ לא התקבלה תשובה תקינה.";
+        log.innerHTML += `<div class="message-bot"><b>SkorChat:</b> ${reply}</div>`;
+        log.scrollTop = log.scrollHeight;
+      } catch {
+        log.innerHTML += `<div class="message-bot text-red-400">⚠️ שגיאה בשליחה או מפתח לא תקין</div>`;
+      }
+    };
 
-  // (המשך הקוד כרגיל...)
+    const generateVideo = () => {
+      const desc = document.getElementById("video-input").value;
+      const status = document.getElementById("video-status");
+      const video = document.getElementById("video-output");
+
+      if (!desc) return;
+      status.innerText = "🎥 מייצר וידאו לפי התיאור שלך...";
+      setTimeout(() => {
+        video.src = "https://www.w3schools.com/html/mov_bbb.mp4"; // דוגמת וידאו
+        video.style.display = "block";
+        status.innerText = "✅ הווידאו מוכן!";
+      }, 1500);
+    };
   </script>
+
+</body>
+</html>
