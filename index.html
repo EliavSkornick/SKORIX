@@ -159,6 +159,18 @@
     } else {
       apiKeyModal.style.display = 'none';
     }
+
+    // 🎤 הקלטת קול
+    micButton.addEventListener('click', () => {
+      const recognition = new webkitSpeechRecognition();
+      recognition.lang = 'he-IL';
+      recognition.start();
+      recognition.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        userInput.value = transcript;
+        sendMessage();
+      };
+    });
   </script>
 </body>
 </html>
