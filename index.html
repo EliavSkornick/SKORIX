@@ -35,56 +35,40 @@
   </div>
 
   <script>
-    const apiKey = prompt("הכנס מפתח OpenAI שלך (sk-...)");
+  const apiKey = "sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"; // מפתח קבוע
+
+  const sendChat = async () => {
+    const input = document.getElementById("chat-input").value;
+    if (!input) return;
+
+    const log = document.getElementById("chat-log");
+    log.innerHTML += `<div class="text-right"><b>אתה:</b> ${input}</div>`;
     
-    const sendChat = async () => {
-      const input = document.getElementById("chat-input").value;
-      if (!input) return;
+    try {
+      const res = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          model: "gpt-4",
+          messages: [
+            { role: "system", content: "אתה SkorChat – עוזר חכם בעברית, פרטי של אליאב סקורניק..." },
+            { role: "user", content: input }
+          ]
+        })
+      });
 
-      const log = document.getElementById("chat-log");
-      log.innerHTML += `<div class="text-right"><b>אתה:</b> ${input}</div>`;
-      
-      try {
-        const res = await fetch("https://api.openai.com/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${apiKey}`
-          },
-          body: JSON.stringify({
-            model: "gpt-4",
-            messages: [
-              { role: "system", content: "אתה SkorChat – עוזר חכם בעברית, פרטי של אליאב סקורניק. דבר תמיד בכבוד, יוקרה ובשפה עמוקה." },
-              { role: "user", content: input }
-            ]
-          })
-        });
-        const data = await res.json();
-        const reply = data.choices?.[0]?.message?.content || "שגיאה בתגובה.";
-        log.innerHTML += `<div class="text-left"><b>SkorChat:</b> ${reply}</div>`;
-      } catch {
-        log.innerHTML += `<div class="text-left text-red-500">⚠️ שגיאה בשליחה או מפתח לא תקין</div>`;
-      }
+      const data = await res.json();
+      const reply = data.choices?.[0]?.message?.content || "שגיאה בתגובה.";
+      log.innerHTML += `<div class="text-left"><b>SkorChat:</b> ${reply}</div>`;
+    } catch {
+      log.innerHTML += `<div class="text-left text-red-500">⚠️ שגיאה בשליחה או מפתח לא תקין</div>`;
+    }
 
-      document.getElementById("chat-input").value = "";
-    };
+    document.getElementById("chat-input").value = "";
+  };
 
-    const generateVideo = () => {
-      const desc = document.getElementById("video-input").value;
-      const status = document.getElementById("video-status");
-      const video = document.getElementById("video-output");
-
-      if (!desc) return;
-      status.innerText = "🎥 מייצר וידאו לפי הפקודה...";
-
-      // דוגמת וידאו קבועה
-      setTimeout(() => {
-        video.src = "https://www.w3schools.com/html/mov_bbb.mp4";
-        video.style.display = "block";
-        status.innerText = "✅ הווידאו מוכן!";
-      }, 1500);
-    };
+  // (המשך הקוד כרגיל...)
   </script>
-
-</body>
-</html>
