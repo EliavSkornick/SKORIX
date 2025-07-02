@@ -52,94 +52,66 @@
         <button id="send-button" class="gold-button">שלח</button>
       </div>
     </div>
+  </div>
 
-    <div id="api-key-modal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center">
-      <div class="bg-white text-black p-6 rounded-lg w-full max-w-md">
-        <h2 class="text-xl font-bold mb-4">הזן את מפתח ה־API שלך</h2>
-        <p class="mb-2">מ־OpenAI (מפתח אישי המתחיל ב־sk-)</p>
-        <input id="api-key-input" type="text" placeholder="...sk-" class="w-full border p-2 mb-4" />
-        <button id="save-api-key" class="gold-button w-full">שמור</button>
-      </div>
-    </div>
+  <script>
+    const chatContainer = document.getElementById('chat-container');
+    const userInput = document.getElementById('user-input');
+    const sendButton = document.getElementById('send-button');
 
-    <script>
-      const chatContainer = document.getElementById('chat-container');
-      const userInput = document.getElementById('user-input');
-      const sendButton = document.getElementById('send-button');
-      const apiKeyModal = document.getElementById('api-key-modal');
-      const saveApiKeyButton = document.getElementById('save-api-key');
-      const apiKeyInput = document.getElementById('api-key-input');
+    const apiKey = "sk-....";
+    function appendMessage(message, isUser) {
+      const div = document.createElement('div');
+      div.className = isUser ? 'user-message' : 'bot-message';
+      div.textContent = message;
+      chatContainer.appendChild(div);
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+      if (!isUser) speak(message); // ✅ דיבור קולי
+    }
 
-      let apiKey = localStorage.getItem('skorchat-api-key');
+    sendButton.addEventListener('click', () => {
+      const message = userInput.value.trim();
+      if (!message) return;
+      appendMessage(message, true);
+      userInput.value = '';
+      sendMessageToGPT(message);
+    });
 
-      if (!apiKey) {
-        apiKeyModal.style.display = 'flex';
+    userInput.addEventListener('keypress', e => {
+      if (e.key === 'Enter') sendButton.click();
+    });
+
+    async function sendMessageToGPT(prompt) {
+      appendMessage('טוען תגובה...', false);
+      try {
+        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`
+          },
+          body: JSON.stringify({
+            model: 'gpt-3.5-turbo',
+            messages: [{ role: 'user', content: prompt }],
+            temperature: 0.7
+          })
+        });
+
+        const data = await response.json();
+        const reply = data.choices?.[0]?.message?.content || 'שגיאה בקבלת תגובה.';
+        chatContainer.lastChild.remove();
+        appendMessage(reply, false);
+      } catch (err) {
+        chatContainer.lastChild.remove();
+        appendMessage('שגיאה בקבלת תגובה.', false);
       }
+    }
 
-      saveApiKeyButton.addEventListener('click', () => {
-        const key = apiKeyInput.value.trim();
-        if (key.startsWith('sk-')) {
-          localStorage.setItem('skorchat-api-key', key);
-          apiKey = key;
-          apiKeyModal.style.display = 'none';
-        } else {
-          alert('מפתח לא תקין');
-        }
-      });
-
-      function appendMessage(message, isUser) {
-        const div = document.createElement('div');
-        div.className = isUser ? 'user-message' : 'bot-message';
-        div.textContent = message;
-        chatContainer.appendChild(div);
-        chatContainer.scrollTop = chatContainer.scrollHeight;
-        if (!isUser) speak(message); // ✅ דיבור כשהבוט עונה
-      }
-
-      sendButton.addEventListener('click', () => {
-        const message = userInput.value.trim();
-        if (!message) return;
-        appendMessage(message, true);
-        userInput.value = '';
-        sendMessageToGPT(message);
-      });
-
-      userInput.addEventListener('keypress', e => {
-        if (e.key === 'Enter') sendButton.click();
-      });
-
-      async function sendMessageToGPT(prompt) {
-        appendMessage('טוען תגובה...', false);
-        try {
-          const response = await fetch('https://api.openai.com/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${apiKey}`
-            },
-            body: JSON.stringify({
-              model: 'gpt-4',
-              messages: [{ role: 'user', content: prompt }],
-              temperature: 0.7
-            })
-          });
-
-          const data = await response.json();
-          const reply = data.choices?.[0]?.message?.content || 'שגיאה בקבלת תגובה.';
-          chatContainer.lastChild.remove(); // הסרת "טוען תגובה"
-          appendMessage(reply, false);
-        } catch (err) {
-          chatContainer.lastChild.remove();
-          appendMessage('שגיאה בקבלת תגובה.', false);
-        }
-      }
-
-      // ✅ דיבור של הבוט בעברית
-      function speak(text) {
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.lang = 'he-IL';
-        speechSynthesis.speak(utterance);
-      }
-    </script>
-  </body>
+    function speak(text) {
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = 'he-IL';
+      speechSynthesis.speak(utterance);
+    }
+  </script>
+</body>
 </html>
