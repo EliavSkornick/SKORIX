@@ -115,7 +115,7 @@
             messages: [
               {
                 role: "system",
-                content: "אתה SkorChat – עוזר חכם בעברית שנבנה על ידי אליאב סקורניק."
+                content: "אתה SkorChat – עוזר חכם בעברית שנבנה על ידי אליאב סקורניק. אל תפתח כל תגובה במשפטים כמו 'איך אפשר לעזור' או 'שלום!' – תגיב ישירות להודעה, כאילו אתה בתוך שיחה מתמשכת עם המשתמש."
               },
               {
                 role: "user",
@@ -130,7 +130,7 @@
         if (data?.choices?.[0]?.message?.content) {
           const botReply = data.choices[0].message.content;
           addMessageToUI('bot', botReply);
-          speak(botReply); // ✅ השורה שמקריאה את הטקסט בקול
+          speak(botReply);
         } else {
           throw new Error("שגיאה: לא התקבלה תשובה תקינה.");
         }
@@ -162,7 +162,6 @@
       apiKeyModal.style.display = 'none';
     }
 
-    // ✅ הפונקציה שמקריאה את הטקסט בקול
     function speak(text) {
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = 'he-IL';
