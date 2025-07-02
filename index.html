@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>SkorChat 🦁 - צ'אט חכם</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;700&display=swap" rel="stylesheet" />
   <style>
     body {
       font-family: 'Heebo', sans-serif;
@@ -38,9 +38,41 @@
       padding: 10px 20px;
       border-radius: 10px;
     }
+    #sidebar {
+      position: fixed;
+      top: 0;
+      right: -250px;
+      width: 250px;
+      height: 100%;
+      background-color: #111827;
+      color: white;
+      transition: right 0.3s ease;
+      padding: 20px;
+      z-index: 50;
+      overflow-y: auto;
+    }
+    #sidebar.show {
+      right: 0;
+    }
+    .sidebar-btn {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      z-index: 100;
+      font-size: 24px;
+      background: none;
+      border: none;
+      color: #facc15;
+    }
   </style>
 </head>
 <body class="min-h-screen p-4">
+  <button id="toggle-sidebar" class="sidebar-btn">☰</button>
+  <div id="sidebar">
+    <h2 class="text-xl font-bold mb-4">שיחות קודמות</h2>
+    <ul id="chat-history" class="text-sm space-y-2"></ul>
+  </div>
+
   <div class="max-w-3xl mx-auto">
     <h1 class="text-4xl font-bold text-yellow-400 mb-2">SkorChat 🦁</h1>
     <p class="mb-6">העוזר החכם שלכם</p>
@@ -72,8 +104,12 @@
     const apiKeyModal = document.getElementById('api-key-modal');
     const apiKeyInput = document.getElementById('api-key-input');
     const saveApiKeyButton = document.getElementById('save-api-key');
+    const chatHistoryList = document.getElementById('chat-history');
+    const toggleSidebar = document.getElementById('toggle-sidebar');
+    const sidebar = document.getElementById('sidebar');
 
     let apiKey = localStorage.getItem('openai_api_key');
+    let messageHistory = [];
 
     const addMessageToUI = (sender, text) => {
       const messageDiv = document.createElement('div');
@@ -81,6 +117,11 @@
       messageDiv.textContent = text;
       chatContainer.appendChild(messageDiv);
       chatContainer.scrollTop = chatContainer.scrollHeight;
+      messageHistory.push({ role: sender === 'user' ? 'user' : 'assistant', content: text });
+
+      const historyItem = document.createElement('li');
+      historyItem.textContent = (sender === 'user' ? '👤 ' : '🦁 ') + text.slice(0, 50);
+      chatHistoryList.appendChild(historyItem);
     };
 
     const sendMessage = async () => {
@@ -113,14 +154,9 @@
           body: JSON.stringify({
             model: "gpt-3.5-turbo",
             messages: [
-              {
-                role: "system",
-                content: "אתה SkorChat – עוזר חכם בעברית שנבנה על ידי אליאב סקורניק. אל תפתח כל תגובה במשפטים כמו 'איך אפשר לעזור' או 'שלום!' – תגיב ישירות להודעה, כאילו אתה בתוך שיחה מתמשכת עם המשתמש."
-              },
-              {
-                role: "user",
-                content: message
-              }
+              { role: "system", content: "אתה SkorChat – עוזר חכם בעברית שנבנה על ידי אליאב סקורניק." },
+              ...messageHistory,
+              { role: "user", content: message }
             ]
           }),
         });
@@ -162,6 +198,12 @@
       apiKeyModal.style.display = 'none';
     }
 
+    // תפריט צד
+    toggleSidebar.addEventListener('click', () => {
+      sidebar.classList.toggle('show');
+    });
+
+    // קריאת טקסט בקול
     function speak(text) {
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = 'he-IL';
