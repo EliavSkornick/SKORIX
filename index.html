@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>SkorChat 🦁 - צ'אט חכם בעברית</title>
+  <title>SkorChat 🦁 - יודע הכל</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;700&display=swap" rel="stylesheet">
   <style>
@@ -51,7 +51,6 @@
     <button onclick="sendMessage()" class="bg-yellow-400 text-black font-bold px-4 rounded-xl">שלח</button>
   </div>
 
-  <!-- כפתור איפוס מפתח API -->
   <div class="text-center mb-4">
     <button onclick="resetApiKey()" class="text-xs text-gray-400 hover:underline mt-2">איפוס מפתח API</button>
   </div>
@@ -59,7 +58,6 @@
   <script>
     const chat = document.getElementById('chat');
     const input = document.getElementById('input');
-
     let apiKey = localStorage.getItem('openai_api_key');
 
     if (!apiKey) {
@@ -98,6 +96,8 @@
       }
 
       try {
+        if (!apiKey) throw new Error("אין מפתח");
+
         const response = await fetch("https://api.openai.com/v1/chat/completions", {
           method: "POST",
           headers: {
@@ -107,19 +107,20 @@
           body: JSON.stringify({
             model: "gpt-4",
             messages: [
-              { role: "system", content: "אתה SkorChat – עוזר חכם בעברית בלבד. ענה בעברית מדויקת, בלי טעויות." },
+              {
+                role: "system",
+                content: "אתה SkorChat – עוזר כל־יודע, עונה בעברית בלבד, בחכמה, חמלה, עומק, רוגע והבנה מלאה. תמיד עונה, תמיד עוזר, תמיד שייך לאליאב סקורניק."
+              },
               { role: "user", content: msg }
             ]
           })
         });
 
-        if (!response.ok) throw new Error("API request failed");
-
         const data = await response.json();
-        const reply = data.choices[0].message.content;
+        const reply = data.choices?.[0]?.message?.content || "לא התקבלה תשובה מהשרת. נסה שוב.";
         respond(reply);
       } catch (e) {
-        respond("❌ שגיאה בתקשורת עם SkorChat. ודא שה־API Key תקין ונסה שוב.");
+        respond("אני לא מחובר כרגע ל־SkorCore, אבל אני פה – תמיד מוכן להקשיב ולענות. תשאל אותי כל דבר.");
       }
     }
 
@@ -144,7 +145,6 @@
       };
     }
 
-    // פונקציה לאיפוס המפתח
     function resetApiKey() {
       localStorage.removeItem('openai_api_key');
       location.reload();
