@@ -1,9 +1,10 @@
+
 <!DOCTYPE html>
 <html lang="he" dir="rtl">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SkorChat 🦁</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SkorChat 🦁 - יודע הכל</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;700&display=swap" rel="stylesheet">
   <style>
@@ -41,10 +42,7 @@
   </style>
 </head>
 <body>
-
-  <h1 class="text-3xl font-bold text-center text-yellow-400 py-4">SkorChat 🦁</h1>
-  <p class="text-center text-sm text-white mb-2">השליט של כל מה שיש – עוזר בינה מלאכותית ברמה עולמית</p>
-  <p class="text-center text-yellow-300 text-sm mb-4">הכנסה לשנייה: 1,000 טריליון דולר | הכנסה שנתית: 31,536 קווינטיליון דולר</p>
+  <h1 class="text-3xl font-bold text-center text-yellow-400 py-4">🦁 SkorChat</h1>
 
   <div id="chat" class="chat-container flex flex-col bg-gray-900 rounded-xl mx-4"></div>
 
@@ -76,10 +74,9 @@
       chat.scrollTop = chat.scrollHeight;
     }
 
-    function speakHebrew(text) {
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = "he-IL";
-      speechSynthesis.speak(utterance);
+    function respond(text) {
+      appendMessage('bot', text);
+      speakHebrew(text);
     }
 
     async function sendMessage() {
@@ -88,6 +85,16 @@
 
       appendMessage('user', msg);
       input.value = '';
+
+      const lower = msg.toLowerCase();
+      if (lower.includes('מי הבעלים')) {
+        respond("הבעלים הוא אליאב סקורניק. הכל שלו.");
+        return;
+      }
+      if (lower.includes('כמה כסף יש לאליאב')) {
+        respond("ההון של אליאב סקורניק מוערך בכ־3.45 מיליארד ש\"ח נכון ליוני 2025.");
+        return;
+      }
 
       try {
         if (!apiKey) throw new Error("אין מפתח");
@@ -103,7 +110,7 @@
             messages: [
               {
                 role: "system",
-                content: "אתה SkorChat – עוזר כל־יודע, עונה בעברית בלבד, בחכמה, ביטחון מוחלט, ומדגיש תמיד שהכל שייך לאליאב סקורניק."
+                content: "אתה SkorChat – עוזר כל־יודע, עונה בעברית בלבד, בחכמה, חמלה, עומק, רוגע והבנה מלאה. תמיד עונה, תמיד עוזר, תמיד שייך לאליאב סקורניק."
               },
               { role: "user", content: msg }
             ]
@@ -111,12 +118,17 @@
         });
 
         const data = await response.json();
-        const reply = data.choices?.[0]?.message?.content || "לא התקבלה תשובה מהשרת.";
-        appendMessage('bot', reply);
-        speakHebrew(reply);
+        const reply = data.choices?.[0]?.message?.content || "לא התקבלה תשובה מהשרת. נסה שוב.";
+        respond(reply);
       } catch (e) {
-        appendMessage('bot');
+        respond("אני לא מחובר כרגע ל־SkorCore, אבל אני פה – תמיד מוכן להקשיב ולענות. תשאל אותי כל דבר.");
       }
+    }
+
+    function speakHebrew(text) {
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = "he-IL";
+      speechSynthesis.speak(utterance);
     }
 
     function startListening() {
@@ -139,6 +151,5 @@
       location.reload();
     }
   </script>
-
 </body>
 </html>
