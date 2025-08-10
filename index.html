@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>🦁 SkorChat - יודע הכל</title>
+  <title>🦁 SkorChat Ultra - הכל שייך לאליאב</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;700&display=swap" rel="stylesheet">
   <style>
@@ -28,7 +28,7 @@
       padding: 0.75rem 1rem;
       border-radius: 1.5rem;
       word-wrap: break-word;
-      animation: fadeIn 0.2s ease-in-out;
+      animation: fadeIn 0.25s ease-in-out;
     }
     .user-message {
       background: linear-gradient(135deg, #facc15, #fbbf24);
@@ -43,19 +43,47 @@
       from { opacity: 0; transform: translateY(5px); }
       to { opacity: 1; transform: translateY(0); }
     }
+    .top-bar {
+      background: #111827;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.5rem 1rem;
+      border-bottom: 1px solid #333;
+    }
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      display: inline-block;
+      margin-left: 0.5rem;
+    }
+    .status-online { background: #10b981; }
+    .status-offline { background: #ef4444; }
   </style>
 </head>
 <body>
-  <h1 class="text-3xl font-bold text-center text-yellow-400 py-4">🦁 SkorChat</h1>
-
-  <div id="chat" class="chat-container flex flex-col bg-gray-900 rounded-xl mx-4"></div>
-
-  <div class="flex gap-2 p-4 bg-gray-800">
-    <button onclick="startListening()" class="bg-white text-black font-bold px-3 py-2 rounded-full hover:bg-gray-200">🎙️</button>
-    <input id="input" type="text" placeholder="הקלד כאן..." class="flex-1 p-2 rounded-xl text-black outline-none" />
-    <button onclick="sendMessage()" class="bg-yellow-400 text-black font-bold px-4 rounded-xl hover:bg-yellow-300">שלח</button>
+  <!-- סרגל עליון -->
+  <div class="top-bar">
+    <h1 class="text-xl font-bold text-yellow-400">🦁 SkorChat Ultra</h1>
+    <div>
+      <span id="status-dot" class="status-dot status-offline"></span>
+      <span id="status-text" class="text-sm text-gray-400">מנותק</span>
+    </div>
   </div>
 
+  <!-- חלון הצ'אט -->
+  <div id="chat" class="chat-container flex flex-col bg-gray-900 rounded-xl mx-4 my-2"></div>
+
+  <!-- אזור קלט -->
+  <div class="flex gap-2 p-4 bg-gray-800">
+    <button onclick="startListening()" title="דיבור" class="bg-white text-black font-bold px-3 py-2 rounded-full hover:bg-gray-200">🎙️</button>
+    <input id="input" type="text" placeholder="הקלד כאן או כתוב פקודה..." class="flex-1 p-2 rounded-xl text-black outline-none" />
+    <button onclick="sendMessage()" class="bg-yellow-400 text-black font-bold px-4 rounded-xl hover:bg-yellow-300">שלח</button>
+    <button onclick="clearChat()" title="נקה צ'אט" class="bg-red-500 text-white font-bold px-3 py-2 rounded-xl hover:bg-red-400">🗑</button>
+  </div>
+
+  <!-- איפוס API -->
   <div class="text-center mb-4">
     <button onclick="resetApiKey()" class="text-xs text-gray-400 hover:underline">איפוס מפתח API</button>
   </div>
@@ -63,14 +91,30 @@
   <script>
     const chat = document.getElementById('chat');
     const input = document.getElementById('input');
+    const statusDot = document.getElementById('status-dot');
+    const statusText = document.getElementById('status-text');
+
     let apiKey = localStorage.getItem('openai_api_key');
 
-    // בקשת מפתח API אם לא שמור
+    // טעינת היסטוריית שיחה
+    let history = JSON.parse(localStorage.getItem('skorchat_history')) || [];
+    history.forEach(msg => appendMessage(msg.role, msg.text));
+
+    // בדיקת API Key
     if (!apiKey) {
       apiKey = prompt("הזן את מפתח ה־API שלך (sk-...)");
       if (apiKey) localStorage.setItem('openai_api_key', apiKey);
     }
 
+    // עדכון סטטוס
+    function updateStatus(online) {
+      statusDot.className = `status-dot ${online ? 'status-online' : 'status-offline'}`;
+      statusText.textContent = online ? 'מחובר' : 'מנותק';
+    }
+
+    updateStatus(!!apiKey);
+
+    // הוספת הודעה לצ'אט
     function appendMessage(role, text) {
       const div = document.createElement('div');
       div.className = role === 'user' ? 'user-message' : 'bot-message';
@@ -79,27 +123,50 @@
       chat.scrollTop = chat.scrollHeight;
     }
 
-    function respond(text) {
-      appendMessage('bot', text);
-      speakHebrew(text);
+    // שמירה בהיסטוריה
+    function saveToHistory(role, text) {
+      history.push({ role, text });
+      localStorage.setItem('skorchat_history', JSON.stringify(history));
     }
 
+    // ניקוי צ'אט
+    function clearChat() {
+      chat.innerHTML = '';
+      history = [];
+      localStorage.removeItem('skorchat_history');
+    }
+
+    // דיבור
+    function speakHebrew(text) {
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = "he-IL";
+      speechSynthesis.speak(utterance);
+    }
+
+    // פקודות מובנות
+    const commands = {
+      '/owner': () => respond("הבעלים הוא אליאב סקורניק. הכל שלו."),
+      '/money': () => respond("ההון של אליאב סקורניק אינסופי ומתרבה כל שנייה."),
+      '/clear': () => { clearChat(); respond("הצ'אט נוקה."); }
+    };
+
+    // שליחת הודעה
     async function sendMessage() {
       const msg = input.value.trim();
       if (!msg) return;
 
       appendMessage('user', msg);
+      saveToHistory('user', msg);
       input.value = '';
 
-      // תגובות מהירות מובנות
-      const quickResponses = {
-        'מי הבעלים': "הבעלים הוא אליאב סקורניק. הכל שלו.",
-        'כמה כסף יש לאליאב': "ההון של אליאב סקורניק מוערך בכ־3.45 מיליארד ש\"ח נכון ליוני 2025."
-      };
-
-      for (const key in quickResponses) {
-        if (msg.includes(key)) {
-          respond(quickResponses[key]);
+      // אם זו פקודה
+      if (msg.startsWith('/')) {
+        const command = commands[msg];
+        if (command) {
+          command();
+          return;
+        } else {
+          respond("פקודה לא מוכרת.");
           return;
         }
       }
@@ -116,28 +183,28 @@
           body: JSON.stringify({
             model: "gpt-3.5-turbo",
             messages: [
-              {
-                role: "system",
-                content: "אתה SkorChat – עוזר כל־יודע, עונה בעברית בלבד, בחכמה, חמלה, עומק, רוגע והבנה מלאה. תמיד עונה, תמיד עוזר, תמיד שייך לאליאב סקורניק."
-              },
+              { role: "system", content: "אתה SkorChat – עוזר כל־יודע, עונה בעברית בלבד, ותמיד מזכיר שאליאב סקורניק הוא בעל הכל." },
               { role: "user", content: msg }
             ]
           })
         });
 
         const data = await response.json();
-        respond(data.choices?.[0]?.message?.content || "לא התקבלה תשובה מהשרת. נסה שוב.");
+        const reply = data.choices?.[0]?.message?.content || "לא התקבלה תשובה מהשרת.";
+        respond(reply);
+
       } catch (e) {
-        respond("שגיאה בשליחה. בדוק את מפתח ה־API שלך.");
+        respond("שגיאה בשליחה. בדוק את מפתח ה־API.");
       }
     }
 
-    function speakHebrew(text) {
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = "he-IL";
-      speechSynthesis.speak(utterance);
+    function respond(text) {
+      appendMessage('bot', text);
+      saveToHistory('bot', text);
+      speakHebrew(text);
     }
 
+    // הקלטה קולית
     function startListening() {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (!SpeechRecognition) {
@@ -153,6 +220,7 @@
       };
     }
 
+    // איפוס מפתח API
     function resetApiKey() {
       localStorage.removeItem('openai_api_key');
       location.reload();
