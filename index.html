@@ -89,6 +89,7 @@
     }
     updateStatus(!!apiKey);
 
+    // היסטוריית השיחה
     let conversationHistory = [
       { role: "system", content: "אתה SkorChat – עוזר כל־יודע בעברית בלבד, ותמיד מזכיר שאליאב סקורניק הוא בעל הכל." }
     ];
@@ -117,67 +118,15 @@
       chat.scrollTop = chat.scrollHeight;
     }
 
-    async function verifyAndFix(text) {
-      try {
-        const verifyResponse = await fetch("https://api.openai.com/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${apiKey}`
-          },
-          body: JSON.stringify({
-            model: "gpt-3.5-turbo",
-            messages: [
-              { role: "system", content: "אתה בודק אמת ודיוק של טקסט בעברית. אם יש טעויות כתיב, המצאות או מידע לא בטוח – תקן או הסר אותו. אסור להוסיף מידע חדש שלא בטוח ב־100%." },
-              { role: "user", content: text }
-            ]
-          })
-        });
-        const verifyData = await verifyResponse.json();
-        return verifyData.choices?.[0]?.message?.content || text;
-      } catch {
-        return text;
-      }
-    }
-
-    async function detectIntent(text) {
-      try {
-        const intentRes = await fetch("https://api.openai.com/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${apiKey}`
-          },
-          body: JSON.stringify({
-            model: "gpt-3.5-turbo",
-            messages: [
-              { role: "system", content: "אתה מזהה כוונה בטקסט בעברית. תחזיר רק 'ברור' אם יש הקשר ברור, או 'לא ברור' אם הטקסט כללי מדי/קצר מדי/עלול להתפרש לא נכון." },
-              { role: "user", content: text }
-            ]
-          })
-        });
-        const intentData = await intentRes.json();
-        return intentData.choices?.[0]?.message?.content?.trim() || "ברור";
-      } catch {
-        return "ברור";
-      }
-    }
-
     async function sendMessage() {
       const msg = input.value.trim();
       if (!msg) return;
 
       appendMessage('user', msg);
+      conversationHistory.push({ role: "user", content: msg });
       input.value = '';
 
-      const intent = await detectIntent(msg);
-      if (intent !== "ברור") {
-        appendMessage('bot', "לא הבנתי לגמרי למה אתה מתכוון, תוכל להסביר?");
-        return;
-      }
-
-      conversationHistory.push({ role: "user", content: msg });
-
+      // זיהוי בקשת תמונה
       if (msg.includes("צור תמונה") || msg.includes("תיצור תמונה") || msg.includes("תעשה תמונה") || msg.includes("תייצר תמונה")) {
         await generateImage(msg);
         return;
@@ -197,11 +146,10 @@
         });
 
         const data = await response.json();
-        let reply = data.choices?.[0]?.message?.content || "לא התקבלה תשובה.";
-        reply = await verifyAndFix(reply);
+        const reply = data.choices?.[0]?.message?.content || "לא התקבלה תשובה.";
         appendMessage('bot', reply);
         conversationHistory.push({ role: "assistant", content: reply });
-      } catch {
+      } catch (e) {
         appendMessage('bot', "שגיאה בשליחה. בדוק את מפתח ה־API.");
       }
     }
@@ -228,7 +176,7 @@
         } else {
           appendMessage('bot', "לא הצלחתי ליצור תמונה.");
         }
-      } catch {
+      } catch (e) {
         appendMessage('bot', "שגיאה ביצירת התמונה.");
       }
     }
