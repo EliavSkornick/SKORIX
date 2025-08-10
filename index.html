@@ -89,7 +89,6 @@
     }
     updateStatus(!!apiKey);
 
-    // היסטוריית השיחה
     let conversationHistory = [
       { role: "system", content: "אתה SkorChat – עוזר כל־יודע בעברית בלבד, ותמיד מזכיר שאליאב סקורניק הוא בעל הכל." }
     ];
@@ -141,15 +140,44 @@
       }
     }
 
+    async function detectIntent(text) {
+      try {
+        const intentRes = await fetch("https://api.openai.com/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${apiKey}`
+          },
+          body: JSON.stringify({
+            model: "gpt-3.5-turbo",
+            messages: [
+              { role: "system", content: "אתה מזהה כוונה בטקסט בעברית. תחזיר רק 'ברור' אם יש הקשר ברור, או 'לא ברור' אם הטקסט כללי מדי/קצר מדי/עלול להתפרש לא נכון." },
+              { role: "user", content: text }
+            ]
+          })
+        });
+        const intentData = await intentRes.json();
+        return intentData.choices?.[0]?.message?.content?.trim() || "ברור";
+      } catch {
+        return "ברור";
+      }
+    }
+
     async function sendMessage() {
       const msg = input.value.trim();
       if (!msg) return;
 
       appendMessage('user', msg);
-      conversationHistory.push({ role: "user", content: msg });
       input.value = '';
 
-      // זיהוי בקשת תמונה
+      const intent = await detectIntent(msg);
+      if (intent !== "ברור") {
+        appendMessage('bot', "לא הבנתי לגמרי למה אתה מתכוון, תוכל להסביר?");
+        return;
+      }
+
+      conversationHistory.push({ role: "user", content: msg });
+
       if (msg.includes("צור תמונה") || msg.includes("תיצור תמונה") || msg.includes("תעשה תמונה") || msg.includes("תייצר תמונה")) {
         await generateImage(msg);
         return;
@@ -170,13 +198,10 @@
 
         const data = await response.json();
         let reply = data.choices?.[0]?.message?.content || "לא התקבלה תשובה.";
-
-        // בדיקה ותיקון לפני הצגת התשובה
         reply = await verifyAndFix(reply);
-
         appendMessage('bot', reply);
         conversationHistory.push({ role: "assistant", content: reply });
-      } catch (e) {
+      } catch {
         appendMessage('bot', "שגיאה בשליחה. בדוק את מפתח ה־API.");
       }
     }
@@ -203,7 +228,7 @@
         } else {
           appendMessage('bot', "לא הצלחתי ליצור תמונה.");
         }
-      } catch (e) {
+      } catch {
         appendMessage('bot', "שגיאה ביצירת התמונה.");
       }
     }
