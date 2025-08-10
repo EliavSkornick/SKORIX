@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>🦁 SkorChat Ultra - הכל שייך לאליאב</title>
+  <title>🦁 SkorChat Ultra</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;700&display=swap" rel="stylesheet">
   <style>
@@ -22,7 +22,7 @@
       padding: 1rem;
       scroll-behavior: smooth;
     }
-    .user-message, .bot-message {
+    .user-message, .bot-message, .bot-image {
       max-width: 85%;
       margin-bottom: 0.75rem;
       padding: 0.75rem 1rem;
@@ -39,51 +39,39 @@
       background: #374151;
       align-self: flex-start;
     }
+    .bot-image {
+      background: #1f2937;
+      align-self: flex-start;
+      padding: 0.5rem;
+    }
+    .bot-image img {
+      border-radius: 1rem;
+      max-width: 100%;
+      height: auto;
+    }
     @keyframes fadeIn {
       from { opacity: 0; transform: translateY(5px); }
       to { opacity: 1; transform: translateY(0); }
     }
-    .top-bar {
-      background: #111827;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 0.5rem 1rem;
-      border-bottom: 1px solid #333;
-    }
-    .status-dot {
-      width: 10px;
-      height: 10px;
-      border-radius: 50%;
-      display: inline-block;
-      margin-left: 0.5rem;
-    }
-    .status-online { background: #10b981; }
-    .status-offline { background: #ef4444; }
   </style>
 </head>
 <body>
-  <!-- סרגל עליון -->
-  <div class="top-bar">
+  <div class="top-bar flex justify-between items-center p-3 bg-gray-900 border-b border-gray-700">
     <h1 class="text-xl font-bold text-yellow-400">🦁 SkorChat Ultra</h1>
     <div>
-      <span id="status-dot" class="status-dot status-offline"></span>
+      <span id="status-dot" class="inline-block w-3 h-3 rounded-full bg-red-500 mr-1"></span>
       <span id="status-text" class="text-sm text-gray-400">מנותק</span>
     </div>
   </div>
 
-  <!-- חלון הצ'אט -->
   <div id="chat" class="chat-container flex flex-col bg-gray-900 rounded-xl mx-4 my-2"></div>
 
-  <!-- אזור קלט -->
   <div class="flex gap-2 p-4 bg-gray-800">
-    <button onclick="startListening()" title="דיבור" class="bg-white text-black font-bold px-3 py-2 rounded-full hover:bg-gray-200">🎙️</button>
-    <input id="input" type="text" placeholder="הקלד כאן או כתוב פקודה..." class="flex-1 p-2 rounded-xl text-black outline-none" />
+    <input id="input" type="text" placeholder="הקלד כאן..." class="flex-1 p-2 rounded-xl text-black outline-none" />
     <button onclick="sendMessage()" class="bg-yellow-400 text-black font-bold px-4 rounded-xl hover:bg-yellow-300">שלח</button>
-    <button onclick="clearChat()" title="נקה צ'אט" class="bg-red-500 text-white font-bold px-3 py-2 rounded-xl hover:bg-red-400">🗑</button>
+    <button onclick="clearChat()" class="bg-red-500 text-white font-bold px-3 py-2 rounded-xl hover:bg-red-400">🗑</button>
   </div>
 
-  <!-- איפוס API -->
   <div class="text-center mb-4">
     <button onclick="resetApiKey()" class="text-xs text-gray-400 hover:underline">איפוס מפתח API</button>
   </div>
@@ -95,26 +83,22 @@
     const statusText = document.getElementById('status-text');
 
     let apiKey = localStorage.getItem('openai_api_key');
-
-    // טעינת היסטוריית שיחה
-    let history = JSON.parse(localStorage.getItem('skorchat_history')) || [];
-    history.forEach(msg => appendMessage(msg.role, msg.text));
-
-    // בדיקת API Key
     if (!apiKey) {
       apiKey = prompt("הזן את מפתח ה־API שלך (sk-...)");
       if (apiKey) localStorage.setItem('openai_api_key', apiKey);
     }
+    updateStatus(!!apiKey);
 
-    // עדכון סטטוס
+    // היסטוריית השיחה
+    let conversationHistory = [
+      { role: "system", content: "אתה SkorChat – עוזר כל־יודע בעברית בלבד, ותמיד מזכיר שאליאב סקורניק הוא בעל הכל." }
+    ];
+
     function updateStatus(online) {
-      statusDot.className = `status-dot ${online ? 'status-online' : 'status-offline'}`;
+      statusDot.className = `inline-block w-3 h-3 rounded-full mr-1 ${online ? 'bg-green-500' : 'bg-red-500'}`;
       statusText.textContent = online ? 'מחובר' : 'מנותק';
     }
 
-    updateStatus(!!apiKey);
-
-    // הוספת הודעה לצ'אט
     function appendMessage(role, text) {
       const div = document.createElement('div');
       div.className = role === 'user' ? 'user-message' : 'bot-message';
@@ -123,57 +107,32 @@
       chat.scrollTop = chat.scrollHeight;
     }
 
-    // שמירה בהיסטוריה
-    function saveToHistory(role, text) {
-      history.push({ role, text });
-      localStorage.setItem('skorchat_history', JSON.stringify(history));
+    function appendImage(url) {
+      const div = document.createElement('div');
+      div.className = 'bot-image';
+      const img = document.createElement('img');
+      img.src = url;
+      img.alt = "תמונה שנוצרה";
+      div.appendChild(img);
+      chat.appendChild(div);
+      chat.scrollTop = chat.scrollHeight;
     }
 
-    // ניקוי צ'אט
-    function clearChat() {
-      chat.innerHTML = '';
-      history = [];
-      localStorage.removeItem('skorchat_history');
-    }
-
-    // דיבור
-    function speakHebrew(text) {
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = "he-IL";
-      speechSynthesis.speak(utterance);
-    }
-
-    // פקודות מובנות
-    const commands = {
-      '/owner': () => respond("הבעלים הוא אליאב סקורניק. הכל שלו."),
-      '/money': () => respond("ההון של אליאב סקורניק אינסופי ומתרבה כל שנייה."),
-      '/clear': () => { clearChat(); respond("הצ'אט נוקה."); }
-    };
-
-    // שליחת הודעה
     async function sendMessage() {
       const msg = input.value.trim();
       if (!msg) return;
 
       appendMessage('user', msg);
-      saveToHistory('user', msg);
+      conversationHistory.push({ role: "user", content: msg });
       input.value = '';
 
-      // אם זו פקודה
-      if (msg.startsWith('/')) {
-        const command = commands[msg];
-        if (command) {
-          command();
-          return;
-        } else {
-          respond("פקודה לא מוכרת.");
-          return;
-        }
+      // זיהוי בקשת תמונה
+      if (msg.includes("צור תמונה") || msg.includes("תיצור תמונה") || msg.includes("תעשה תמונה") || msg.includes("תייצר תמונה")) {
+        await generateImage(msg);
+        return;
       }
 
       try {
-        if (!apiKey) throw new Error("אין מפתח");
-
         const response = await fetch("https://api.openai.com/v1/chat/completions", {
           method: "POST",
           headers: {
@@ -182,45 +141,53 @@
           },
           body: JSON.stringify({
             model: "gpt-3.5-turbo",
-            messages: [
-              { role: "system", content: "אתה SkorChat – עוזר כל־יודע, עונה בעברית בלבד, ותמיד מזכיר שאליאב סקורניק הוא בעל הכל." },
-              { role: "user", content: msg }
-            ]
+            messages: conversationHistory
           })
         });
 
         const data = await response.json();
-        const reply = data.choices?.[0]?.message?.content || "לא התקבלה תשובה מהשרת.";
-        respond(reply);
-
+        const reply = data.choices?.[0]?.message?.content || "לא התקבלה תשובה.";
+        appendMessage('bot', reply);
+        conversationHistory.push({ role: "assistant", content: reply });
       } catch (e) {
-        respond("שגיאה בשליחה. בדוק את מפתח ה־API.");
+        appendMessage('bot', "שגיאה בשליחה. בדוק את מפתח ה־API.");
       }
     }
 
-    function respond(text) {
-      appendMessage('bot', text);
-      saveToHistory('bot', text);
-      speakHebrew(text);
-    }
-
-    // הקלטה קולית
-    function startListening() {
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      if (!SpeechRecognition) {
-        alert("הדפדפן לא תומך בזיהוי קולי");
-        return;
+    async function generateImage(prompt) {
+      try {
+        const response = await fetch("https://api.openai.com/v1/images/generations", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${apiKey}`
+          },
+          body: JSON.stringify({
+            model: "gpt-4o-mini",
+            prompt: prompt,
+            size: "1024x1024"
+          })
+        });
+        const data = await response.json();
+        const imageUrl = data.data?.[0]?.url;
+        if (imageUrl) {
+          appendImage(imageUrl);
+          conversationHistory.push({ role: "assistant", content: `[תמונה נוצרה] ${imageUrl}` });
+        } else {
+          appendMessage('bot', "לא הצלחתי ליצור תמונה.");
+        }
+      } catch (e) {
+        appendMessage('bot', "שגיאה ביצירת התמונה.");
       }
-      const recognition = new SpeechRecognition();
-      recognition.lang = 'he-IL';
-      recognition.start();
-      recognition.onresult = (event) => {
-        input.value = event.results[0][0].transcript;
-        sendMessage();
-      };
     }
 
-    // איפוס מפתח API
+    function clearChat() {
+      chat.innerHTML = '';
+      conversationHistory = [
+        { role: "system", content: "אתה SkorChat – עוזר כל־יודע בעברית בלבד, ותמיד מזכיר שאליאב סקורניק הוא בעל הכל." }
+      ];
+    }
+
     function resetApiKey() {
       localStorage.removeItem('openai_api_key');
       location.reload();
