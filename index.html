@@ -118,6 +118,29 @@
       chat.scrollTop = chat.scrollHeight;
     }
 
+    async function verifyAndFix(text) {
+      try {
+        const verifyResponse = await fetch("https://api.openai.com/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${apiKey}`
+          },
+          body: JSON.stringify({
+            model: "gpt-3.5-turbo",
+            messages: [
+              { role: "system", content: "אתה בודק אמת ודיוק של טקסט בעברית. אם יש טעויות כתיב, המצאות או מידע לא בטוח – תקן או הסר אותו. אסור להוסיף מידע חדש שלא בטוח ב־100%." },
+              { role: "user", content: text }
+            ]
+          })
+        });
+        const verifyData = await verifyResponse.json();
+        return verifyData.choices?.[0]?.message?.content || text;
+      } catch {
+        return text;
+      }
+    }
+
     async function sendMessage() {
       const msg = input.value.trim();
       if (!msg) return;
@@ -146,7 +169,11 @@
         });
 
         const data = await response.json();
-        const reply = data.choices?.[0]?.message?.content || "לא התקבלה תשובה.";
+        let reply = data.choices?.[0]?.message?.content || "לא התקבלה תשובה.";
+
+        // בדיקה ותיקון לפני הצגת התשובה
+        reply = await verifyAndFix(reply);
+
         appendMessage('bot', reply);
         conversationHistory.push({ role: "assistant", content: reply });
       } catch (e) {
