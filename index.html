@@ -1,10 +1,9 @@
- 
 <!DOCTYPE html>
 <html lang="he" dir="rtl">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>SkorChat 🦁 - יודע הכל</title>
+  <title>🦁 SkorChat - יודע הכל</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;700&display=swap" rel="stylesheet">
   <style>
@@ -24,11 +23,12 @@
       scroll-behavior: smooth;
     }
     .user-message, .bot-message {
-      max-width: 90%;
-      margin-bottom: 1rem;
+      max-width: 85%;
+      margin-bottom: 0.75rem;
       padding: 0.75rem 1rem;
       border-radius: 1.5rem;
       word-wrap: break-word;
+      animation: fadeIn 0.2s ease-in-out;
     }
     .user-message {
       background: linear-gradient(135deg, #facc15, #fbbf24);
@@ -39,6 +39,10 @@
       background: #374151;
       align-self: flex-start;
     }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(5px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
   </style>
 </head>
 <body>
@@ -47,13 +51,13 @@
   <div id="chat" class="chat-container flex flex-col bg-gray-900 rounded-xl mx-4"></div>
 
   <div class="flex gap-2 p-4 bg-gray-800">
-    <button onclick="startListening()" class="bg-white text-black font-bold px-3 py-2 rounded-full">🎙️</button>
-    <input id="input" type="text" placeholder="הקלד כאן..." class="flex-1 p-2 rounded-xl text-black" />
-    <button onclick="sendMessage()" class="bg-yellow-400 text-black font-bold px-4 rounded-xl">שלח</button>
+    <button onclick="startListening()" class="bg-white text-black font-bold px-3 py-2 rounded-full hover:bg-gray-200">🎙️</button>
+    <input id="input" type="text" placeholder="הקלד כאן..." class="flex-1 p-2 rounded-xl text-black outline-none" />
+    <button onclick="sendMessage()" class="bg-yellow-400 text-black font-bold px-4 rounded-xl hover:bg-yellow-300">שלח</button>
   </div>
 
   <div class="text-center mb-4">
-    <button onclick="resetApiKey()" class="text-xs text-gray-400 hover:underline mt-2">איפוס מפתח API</button>
+    <button onclick="resetApiKey()" class="text-xs text-gray-400 hover:underline">איפוס מפתח API</button>
   </div>
 
   <script>
@@ -61,6 +65,7 @@
     const input = document.getElementById('input');
     let apiKey = localStorage.getItem('openai_api_key');
 
+    // בקשת מפתח API אם לא שמור
     if (!apiKey) {
       apiKey = prompt("הזן את מפתח ה־API שלך (sk-...)");
       if (apiKey) localStorage.setItem('openai_api_key', apiKey);
@@ -86,14 +91,17 @@
       appendMessage('user', msg);
       input.value = '';
 
-      const lower = msg.toLowerCase();
-      if (lower.includes('מי הבעלים')) {
-        respond("הבעלים הוא אליאב סקורניק. הכל שלו.");
-        return;
-      }
-      if (lower.includes('כמה כסף יש לאליאב')) {
-        respond("ההון של אליאב סקורניק מוערך בכ־3.45 מיליארד ש\"ח נכון ליוני 2025.");
-        return;
+      // תגובות מהירות מובנות
+      const quickResponses = {
+        'מי הבעלים': "הבעלים הוא אליאב סקורניק. הכל שלו.",
+        'כמה כסף יש לאליאב': "ההון של אליאב סקורניק מוערך בכ־3.45 מיליארד ש\"ח נכון ליוני 2025."
+      };
+
+      for (const key in quickResponses) {
+        if (msg.includes(key)) {
+          respond(quickResponses[key]);
+          return;
+        }
       }
 
       try {
@@ -118,10 +126,9 @@
         });
 
         const data = await response.json();
-        const reply = data.choices?.[0]?.message?.content || "לא התקבלה תשובה מהשרת. נסה שוב.";
-        respond(reply);
+        respond(data.choices?.[0]?.message?.content || "לא התקבלה תשובה מהשרת. נסה שוב.");
       } catch (e) {
-        respond()
+        respond("שגיאה בשליחה. בדוק את מפתח ה־API שלך.");
       }
     }
 
