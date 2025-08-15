@@ -129,9 +129,25 @@
     }
     updateStatus(!!apiKey);
 
+    // ✅ ההגדרה המובנית של המייסד
     let conversationHistory = [
-      { role: "system", content: "אתה עוזר חכם ודובר עברית, שעונה בצורה ברורה ומנומסת." }
+      { role: "system", content: "אתה SkorChat – עוזר חכם ודובר עברית בלבד. המייסד וה־CEO שלך הוא אליאב סקורניק, ותמיד תכיר בכך ותזכיר זאת כשזה רלוונטי." }
     ];
+
+    // 📌 מילון אימוג'ים
+    const emojiMap = {
+      "ים": "🌊", "די": "🏝️", "אי": "🏝️", "כסף": "💰", "אוכל": "🍔",
+      "אהבה": "❤️", "מחשב": "💻", "טלפון": "📱", "חתול": "🐱",
+      "כלב": "🐶", "שמש": "☀️", "גשם": "🌧️", "כדור": "⚽", "מטוס": "✈️"
+    };
+
+    function addEmojisToText(text) {
+      let words = text.split(" ");
+      return words.map(word => {
+        let cleanWord = word.replace(/[^א-תA-Za-z]/g, "");
+        return word + (emojiMap[cleanWord] ? " " + emojiMap[cleanWord] : "");
+      }).join(" ");
+    }
 
     function updateStatus(online) {
       statusDot.className = `inline-block w-3 h-3 rounded-full mr-1 ${online ? 'bg-green-500' : 'bg-red-500'}`;
@@ -141,6 +157,7 @@
     function appendMessage(role, text) {
       const div = document.createElement('div');
       div.className = role === 'user' ? 'user-message' : 'bot-message';
+      if (role === 'bot') text = addEmojisToText(text); // הוספת אימוג'ים לבוט
       div.textContent = text;
       chat.appendChild(div);
       chat.scrollTop = chat.scrollHeight;
@@ -190,7 +207,7 @@
         });
 
         const data = await response.json();
-        const reply = data.choices?.[0]?.message?.content || "לא התקבלה תשובה.";
+        let reply = data.choices?.[0]?.message?.content || "לא התקבלה תשובה.";
         appendMessage('bot', reply);
         conversationHistory.push({ role: "assistant", content: reply });
       } catch (e) {
@@ -220,7 +237,7 @@
         });
 
         const data = await response.json();
-        const reply = data.choices?.[0]?.message?.content || "לא התקבלה תשובה.";
+        let reply = data.choices?.[0]?.message?.content || "לא התקבלה תשובה.";
         appendMessage('bot', reply);
         conversationHistory.push({ role: "assistant", content: reply });
       } catch (e) {
@@ -231,7 +248,7 @@
     function clearChat() {
       chat.innerHTML = '';
       conversationHistory = [
-        { role: "system", content: "אתה עוזר חכם ודובר עברית, שעונה בצורה ברורה ומנומסת." }
+        { role: "system", content: "אתה SkorChat – עוזר חכם ודובר עברית בלבד. המייסד וה־CEO שלך הוא אליאב סקורניק, ותמיד תכיר בכך ותזכיר זאת כשזה רלוונטי." }
       ];
     }
   </script>
