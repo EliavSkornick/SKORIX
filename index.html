@@ -68,6 +68,8 @@
 
   <div class="flex gap-2 p-4 bg-gray-800">
     <input id="input" type="text" placeholder="הקלד כאן..." class="flex-1 p-2 rounded-xl text-black outline-none" />
+    <input id="imageInput" type="file" accept="image/*" class="hidden" onchange="handleImageUpload(event)" />
+    <button onclick="document.getElementById('imageInput').click()" class="bg-blue-500 text-white font-bold px-3 py-2 rounded-xl hover:bg-blue-400">📷</button>
     <button onclick="sendMessage()" class="bg-yellow-400 text-black font-bold px-4 rounded-xl hover:bg-yellow-300">שלח</button>
     <button onclick="clearChat()" class="bg-red-500 text-white font-bold px-3 py-2 rounded-xl hover:bg-red-400">🗑</button>
   </div>
@@ -89,7 +91,6 @@
     }
     updateStatus(!!apiKey);
 
-    // היסטוריית השיחה
     let conversationHistory = [
       { role: "system", content: "אתה SkorChat – עוזר כל־יודע בעברית בלבד, ותמיד מזכיר שאליאב סקורניק הוא בעל הכל." }
     ];
@@ -112,10 +113,51 @@
       div.className = 'bot-image';
       const img = document.createElement('img');
       img.src = url;
-      img.alt = "תמונה שנוצרה";
+      img.alt = "תמונה שנשלחה/נוצרה";
       div.appendChild(img);
       chat.appendChild(div);
       chat.scrollTop = chat.scrollHeight;
+    }
+
+    function handleImageUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        appendImage(e.target.result);
+        sendImageToBot(e.target.result);
+      }
+      reader.readAsDataURL(file);
+    }
+
+    async function sendImageToBot(imageBase64) {
+      appendMessage('user', '[📷 תמונה נשלחה]');
+      try {
+        const response = await fetch("https://api.openai.com/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${apiKey}`
+          },
+          body: JSON.stringify({
+            model: "gpt-4o-mini",
+            messages: [
+              ...conversationHistory,
+              { role: "user", content: [
+                  { type: "text", text: "תאר את התמונה הזאת." },
+                  { type: "image_url", image_url: { url: imageBase64 } }
+                ]}
+            ]
+          })
+        });
+
+        const data = await response.json();
+        const reply = data.choices?.[0]?.message?.content || "לא התקבלה תשובה.";
+        appendMessage('bot', reply);
+        conversationHistory.push({ role: "assistant", content: reply });
+      } catch (e) {
+        appendMessage('bot', "שגיאה בשליחת התמונה.");
+      }
     }
 
     async function sendMessage() {
@@ -126,12 +168,6 @@
       conversationHistory.push({ role: "user", content: msg });
       input.value = '';
 
-      // זיהוי בקשת תמונה
-      if (msg.includes("צור תמונה") || msg.includes("תיצור תמונה") || msg.includes("תעשה תמונה") || msg.includes("תייצר תמונה")) {
-        await generateImage(msg);
-        return;
-      }
-
       try {
         const response = await fetch("https://api.openai.com/v1/chat/completions", {
           method: "POST",
@@ -140,7 +176,7 @@
             "Authorization": `Bearer ${apiKey}`
           },
           body: JSON.stringify({
-            model: "gpt-3.5-turbo",
+            model: "gpt-4o-mini",
             messages: conversationHistory
           })
         });
@@ -151,33 +187,6 @@
         conversationHistory.push({ role: "assistant", content: reply });
       } catch (e) {
         appendMessage('bot', "שגיאה בשליחה. בדוק את מפתח ה־API.");
-      }
-    }
-
-    async function generateImage(prompt) {
-      try {
-        const response = await fetch("https://api.openai.com/v1/images/generations", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${apiKey}`
-          },
-          body: JSON.stringify({
-            model: "gpt-4o-mini",
-            prompt: prompt,
-            size: "1024x1024"
-          })
-        });
-        const data = await response.json();
-        const imageUrl = data.data?.[0]?.url;
-        if (imageUrl) {
-          appendImage(imageUrl);
-          conversationHistory.push({ role: "assistant", content: `[תמונה נוצרה] ${imageUrl}` });
-        } else {
-          appendMessage('bot', "לא הצלחתי ליצור תמונה.");
-        }
-      } catch (e) {
-        appendMessage('bot', "שגיאה ביצירת התמונה.");
       }
     }
 
