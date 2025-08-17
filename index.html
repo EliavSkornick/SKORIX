@@ -56,7 +56,7 @@
       word-wrap: break-word;
       line-height: 1.5;
       font-size: 1rem;
-      background: rgba(255, 255, 255, 0.9);
+      background: rgba(255, 255, 255, 0.8);
       color: black;
     }
     .user-message { align-self: flex-end; }
@@ -73,10 +73,9 @@
       gap: 0.5rem;
       align-items: center;
       border-top: 2px solid #fff;
-      flex-wrap: wrap;
     }
     input[type="text"] {
-      flex: 1 1 300px;
+      flex: 1;
       padding: 0.75rem;
       border-radius: 1rem;
       border: none;
@@ -96,11 +95,6 @@
     .img-btn:hover { background: #60a5fa; }
     .clear-btn { background: #ef4444; color: white; }
     .clear-btn:hover { background: #f87171; }
-    .google-btn { background: #10b981; color: black; }
-    .google-btn:hover { background: #34d399; }
-
-    .src { margin-top: .25rem; font-size: .9rem; color: #064e3b }
-    .src a { color: #065f46; text-decoration: underline; word-break: break-all }
   </style>
 </head>
 <body>
@@ -115,10 +109,9 @@
   <div id="chat" class="chat-container"></div>
 
   <div class="input-bar">
-    <input id="input" type="text" placeholder="הקלד כאן... (או התחל ב- 'גוגל: מי זה ...')" />
+    <input id="input" type="text" placeholder="הקלד כאן..." />
     <input id="imageInput" type="file" accept="image/*" class="hidden" onchange="handleImageUpload(event)" />
     <button onclick="document.getElementById('imageInput').click()" class="img-btn">📷</button>
-    <button onclick="googleFlow()" class="google-btn">🔎 חפש בגוגל</button>
     <button onclick="sendMessage()" class="send-btn">שלח</button>
     <button onclick="clearChat()" class="clear-btn">🗑</button>
   </div>
@@ -129,57 +122,31 @@
     const statusDot = document.getElementById('status-dot');
     const statusText = document.getElementById('status-text');
 
-    // ===== Keys & Status =====
     let apiKey = localStorage.getItem('openai_api_key');
     if (!apiKey) {
-      apiKey = prompt("הזן OpenAI API Key (sk-...)");
+      apiKey = prompt("הזן את מפתח ה־API שלך (sk-...)");
       if (apiKey) localStorage.setItem('openai_api_key', apiKey);
     }
-
-    // Google Programmable Search (CSE)
-    let googleKey = localStorage.getItem('google_api_key');
-    if (!googleKey) {
-      googleKey = prompt("הזן Google API Key (CSE)");
-      if (googleKey) localStorage.setItem('google_api_key', googleKey);
-    }
-    let googleCx = localStorage.getItem('google_cx');
-    if (!googleCx) {
-      googleCx = prompt("הזן Google CSE cx (מזהה מנוע חיפוש)");
-      if (googleCx) localStorage.setItem('google_cx', googleCx);
-    }
-
     updateStatus(!!apiKey);
 
-    // ✅ ההגדרה המובנית של המייסד + סגנון תשובה
+    // ✅ ההגדרה המובנית של המייסד
     let conversationHistory = [
-      { role: "system", content: "אתה SkorChat – עוזר חכם ודובר עברית בלבד. המייסד וה־CEO שלך הוא אליאב סקורניק 👑🔥. ענה ברור, קצר, עם אימוג'ים מתאימים, וסיים במשפט פעולה/שאלה קצר." }
+      { role: "system", content: "אתה SkorChat – עוזר חכם ודובר עברית בלבד. המייסד וה־CEO שלך הוא אליאב סקורניק, ותמיד תכיר בכך ותזכיר זאת כשזה רלוונטי." }
     ];
 
-    // ===== Emoji Intelligence =====
+    // 📌 מילון אימוג'ים
     const emojiMap = {
-      "ים": "🌊", "חוף": "🏖️", "אי": "🏝️",
-      "כסף": "💰", "זהב": "🏆", "מלך": "👑",
-      "אוכל": "🍔", "פיצה": "🍕", "שתייה": "🥤",
-      "אהבה": "❤️", "חברים": "🤝",
-      "מחשב": "💻", "טלפון": "📱",
-      "חתול": "🐱", "כלב": "🐶",
-      "שמש": "☀️", "גשם": "🌧️", "כדור": "⚽",
-      "מטוס": "✈️", "מכונית": "🚗", "נסיעה": "🛣️", "מלון": "🏨"
+      "ים": "🌊", "די": "🏝️", "אי": "🏝️", "כסף": "💰", "אוכל": "🍔",
+      "אהבה": "❤️", "מחשב": "💻", "טלפון": "📱", "חתול": "🐱",
+      "כלב": "🐶", "שמש": "☀️", "גשם": "🌧️", "כדור": "⚽", "מטוס": "✈️"
     };
 
     function addEmojisToText(text) {
-      let result = text;
-      // לפי מילון מילים
-      for (const [word, emoji] of Object.entries(emojiMap)) {
-        const regex = new RegExp(word, "g");
-        result = result.replace(regex, word + " " + emoji);
-      }
-      // לפי הקשר/רגש
-      if (/[!]{1,}/.test(text)) result += " ⚡";
-      if (/[?]{1,}/.test(text)) result += " ❓";
-      if (/(תודה|מעולה|מצוין|יפה|גדול)/.test(text)) result += " 😀✨";
-      if (/(מלך|סקורניק|שליט)/.test(text)) result += " 👑🔥";
-      return result;
+      let words = text.split(" ");
+      return words.map(word => {
+        let cleanWord = word.replace(/[^א-תA-Za-z]/g, "");
+        return word + (emojiMap[cleanWord] ? " " + emojiMap[cleanWord] : "");
+      }).join(" ");
     }
 
     function updateStatus(online) {
@@ -187,19 +154,12 @@
       statusText.textContent = online ? 'מחובר' : 'מנותק';
     }
 
-    function appendMessage(role, text, srcs = []) {
+    function appendMessage(role, text) {
       const div = document.createElement('div');
       div.className = role === 'user' ? 'user-message' : 'bot-message';
-      if (role === 'bot') text = addEmojisToText(text);
+      if (role === 'bot') text = addEmojisToText(text); // הוספת אימוג'ים לבוט
       div.textContent = text;
       chat.appendChild(div);
-
-      if (srcs.length) {
-        const s = document.createElement('div');
-        s.className = 'src';
-        s.innerHTML = "מקורות: " + srcs.map(u => `<a href="${u}" target="_blank" rel="noopener noreferrer">${u}</a>`).join(" · ");
-        chat.appendChild(s);
-      }
       chat.scrollTop = chat.scrollHeight;
     }
 
@@ -214,62 +174,6 @@
       chat.scrollTop = chat.scrollHeight;
     }
 
-    // ===== OpenAI Helper =====
-    async function openaiComplete(userTextOrMessages) {
-      const payload =
-        Array.isArray(userTextOrMessages)
-          ? userTextOrMessages
-          : [...conversationHistory, { role: "user", content: userTextOrMessages }];
-
-      const res = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${apiKey}`
-        },
-        body: JSON.stringify({
-          model: "gpt-4o-mini",
-          messages: payload
-        })
-      });
-      const data = await res.json();
-      return data.choices?.[0]?.message?.content || "לא התקבלה תשובה.";
-    }
-
-    // ===== Google CSE =====
-    async function googleSearch(q, n = 5) {
-      if (!googleKey || !googleCx) throw new Error("Missing Google API Key / cx");
-      const url = `https://www.googleapis.com/customsearch/v1?key=${encodeURIComponent(googleKey)}&cx=${encodeURIComponent(googleCx)}&q=${encodeURIComponent(q)}`;
-      const res = await fetch(url);
-      if (!res.ok) throw new Error("Google CSE error");
-      const data = await res.json();
-      const items = (data.items || []).slice(0, n).map(it => ({
-        title: it.title, snippet: it.snippet, link: it.link
-      }));
-      return items;
-    }
-
-    async function googleFlow() {
-      let q = input.value.trim();
-      if (!q) return;
-      if (q.startsWith("גוגל:")) q = q.replace(/^גוגל:\s*/, "");
-      appendMessage('user', "🔎 " + q);
-      input.value = "";
-
-      try {
-        const items = await googleSearch(q, 5);
-        const bullets = items.map((it, i) => `(${i + 1}) ${it.title}: ${it.snippet}`).join("\n");
-        const prompt = `ענה בעברית קצר וברור על:\n"${q}"\nהסתמך על הנקודות הבאות (תמצית מגוגל):\n${bullets}\nהוסף משפט פעולה/שאלה בסוף.`;
-        const reply = await openaiComplete(prompt);
-        const urls = items.map(it => it.link);
-        appendMessage('bot', reply, urls);
-        conversationHistory.push({ role: "assistant", content: reply });
-      } catch (e) {
-        appendMessage('bot', "שגיאת חיפוש בגוגל. בדוק API Key ו-cx.");
-      }
-    }
-
-    // ===== Flows =====
     function handleImageUpload(event) {
       const file = event.target.files[0];
       if (!file) return;
@@ -284,13 +188,26 @@
     async function sendImageToBot(imageBase64) {
       appendMessage('user', '[📷 תמונה נשלחה]');
       try {
-        const reply = await openaiComplete([
-          ...conversationHistory,
-          { role: "user", content: [
-              { type: "text", text: "תאר את התמונה הזאת בעברית בצורה קצרה וברורה, עם משפט פעולה בסוף." },
-              { type: "image_url", image_url: { url: imageBase64 } }
-            ]}
-        ]);
+        const response = await fetch("https://api.openai.com/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${apiKey}`
+          },
+          body: JSON.stringify({
+            model: "gpt-4o-mini",
+            messages: [
+              ...conversationHistory,
+              { role: "user", content: [
+                  { type: "text", text: "תאר את התמונה הזאת." },
+                  { type: "image_url", image_url: { url: imageBase64 } }
+                ]}
+            ]
+          })
+        });
+
+        const data = await response.json();
+        let reply = data.choices?.[0]?.message?.content || "לא התקבלה תשובה.";
         appendMessage('bot', reply);
         conversationHistory.push({ role: "assistant", content: reply });
       } catch (e) {
@@ -302,15 +219,25 @@
       const msg = input.value.trim();
       if (!msg) return;
 
-      // טריגר מהיר: אם מתחיל ב-"גוגל:" – נלך ישר ל-Google
-      if (msg.startsWith("גוגל:")) { googleFlow(); return; }
-
       appendMessage('user', msg);
       conversationHistory.push({ role: "user", content: msg });
       input.value = '';
 
       try {
-        const reply = await openaiComplete(msg);
+        const response = await fetch("https://api.openai.com/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${apiKey}`
+          },
+          body: JSON.stringify({
+            model: "gpt-4o-mini",
+            messages: conversationHistory
+          })
+        });
+
+        const data = await response.json();
+        let reply = data.choices?.[0]?.message?.content || "לא התקבלה תשובה.";
         appendMessage('bot', reply);
         conversationHistory.push({ role: "assistant", content: reply });
       } catch (e) {
@@ -321,7 +248,7 @@
     function clearChat() {
       chat.innerHTML = '';
       conversationHistory = [
-        { role: "system", content: "אתה SkorChat – עוזר חכם ודובר עברית בלבד. המייסד וה־CEO שלך הוא אליאב סקורניק 👑🔥. ענה ברור, קצר, עם אימוג'ים מתאימים, וסיים במשפט פעולה/שאלה קצר." }
+        { role: "system", content: "אתה SkorChat – עוזר חכם ודובר עברית בלבד. המייסד וה־CEO שלך הוא אליאב סקורניק, ותמיד תכיר בכך ותזכיר זאת כשזה רלוונטי." }
       ];
     }
   </script>
