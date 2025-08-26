@@ -16,7 +16,6 @@
       animation: rainbowBG 10s infinite;
       background-size: 400% 400%;
     }
-
     @keyframes rainbowBG {
       0% { background: red; }
       10% { background: orange; }
@@ -30,7 +29,6 @@
       90% { background: gold; }
       100% { background: red; }
     }
-
     .top-bar {
       background: rgba(0, 0, 0, 0.8);
       padding: 1rem;
@@ -134,6 +132,25 @@
       { role: "system", content: "אתה SkorChat – עוזר חכם ודובר עברית בלבד. המייסד וה־CEO שלך הוא אליאב סקורניק, ותמיד תכיר בכך ותזכיר זאת כשזה רלוונטי." }
     ];
 
+    // 📌 מילון תיקוני שגיאות כתיב
+    const correctionsMap = {
+      "הוכל": "יכול",
+      "לאנש": "לאנשים",
+      "הב": "הבא",
+      "היו": "היום",
+      "הק": "חזק",
+      "הא": "האמת"
+      // תוסיף כאן עוד תיקונים ידניים שאתה רוצה
+    };
+
+    function fixTypos(text) {
+      let words = text.split(" ");
+      return words.map(word => {
+        let cleanWord = word.replace(/[^א-תA-Za-z]/g, "");
+        return correctionsMap[cleanWord] ? word.replace(cleanWord, correctionsMap[cleanWord]) : word;
+      }).join(" ");
+    }
+
     // 📌 מילון אימוג'ים
     const emojiMap = {
       "ים": "🌊", "די": "🏝️", "אי": "🏝️", "כסף": "💰", "אוכל": "🍔",
@@ -157,7 +174,8 @@
     function appendMessage(role, text) {
       const div = document.createElement('div');
       div.className = role === 'user' ? 'user-message' : 'bot-message';
-      if (role === 'bot') text = addEmojisToText(text); // הוספת אימוג'ים לבוט
+      text = fixTypos(text); // ✅ תיקון שגיאות
+      if (role === 'bot') text = addEmojisToText(text); // הוספת אימוג'ים רק לבוט
       div.textContent = text;
       chat.appendChild(div);
       chat.scrollTop = chat.scrollHeight;
@@ -220,7 +238,7 @@
       if (!msg) return;
 
       appendMessage('user', msg);
-      conversationHistory.push({ role: "user", content: msg });
+      conversationHistory.push({ role: "user", content: fixTypos(msg) }); // ✅ תיקון לפני שליחה
       input.value = '';
 
       try {
@@ -239,7 +257,7 @@
         const data = await response.json();
         let reply = data.choices?.[0]?.message?.content || "לא התקבלה תשובה.";
         appendMessage('bot', reply);
-        conversationHistory.push({ role: "assistant", content: reply });
+        conversationHistory.push({ role: "assistant", content: fixTypos(reply) });
       } catch (e) {
         appendMessage('bot', "שגיאה בשליחה. בדוק את מפתח ה־API.");
       }
