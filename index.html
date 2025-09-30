@@ -68,7 +68,6 @@
       if (apiKey) localStorage.setItem("skor_api_key", apiKey);
     }
 
-    // היסטוריית שיחה
     let conversationHistory = [];
 
     function appendMessage(role, text) {
@@ -98,13 +97,25 @@
         );
 
         const data = await response.json();
+        console.log("📡 Debug:", data); // רואה בקונסול בדיוק מה חזר
+
+        if (data.error) {
+          if (data.error.code === 401) {
+            appendMessage("bot", "❌ המפתח שגוי – בדוק שהעתקת נכון את ה־API Key.");
+          } else if (data.error.code === 429) {
+            appendMessage("bot", "⚠️ חרגת מהמכסה – אין קרדיטים זמינים לחשבון שלך.");
+          } else {
+            appendMessage("bot", "⚠️ שגיאה: " + data.error.message);
+          }
+          return;
+        }
 
         if (data.candidates && data.candidates.length > 0) {
           const reply = data.candidates[0].content.parts[0].text;
           appendMessage("bot", reply);
           conversationHistory.push({ role: "model", parts: [{ text: reply }] });
         } else {
-          appendMessage("bot", "⚠️ לא התקבלה תשובה מ־SkorChat.");
+          appendMessage("bot", "⚠️ SkorChat לא החזיר תשובה (כנראה בעיית מפתח או מכסה).");
         }
       } catch (e) {
         appendMessage("bot", "❌ שגיאת חיבור ל־SkorChat API.");
