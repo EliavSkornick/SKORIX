@@ -54,6 +54,7 @@
       <input id="input" type="text" placeholder="הקלד כאן..." />
       <button onclick="sendMessage()" class="send-btn">שלח</button>
       <button onclick="clearChat()" class="clear-btn">🗑</button>
+      <button onclick="changeKey()" class="send-btn">🔑</button>
     </div>
   </div>
 
@@ -81,6 +82,17 @@
         chatScreen.classList.remove("hidden");
       } else {
         alert("❌ המפתח לא תקין, ודא שהעתקת נכון.");
+      }
+    }
+
+    function changeKey() {
+      const newKey = prompt("🔑 הזן מפתח API חדש:");
+      if (newKey && newKey.startsWith("AIza")) {
+        localStorage.setItem("skor_api_key", newKey);
+        apiKey = newKey;
+        alert("✅ המפתח עודכן בהצלחה!");
+      } else {
+        alert("❌ מפתח לא תקין – ודא שהעתקת נכון (מתחיל ב־AIza).");
       }
     }
 
