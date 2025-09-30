@@ -95,6 +95,8 @@
     .img-btn:hover { background: #60a5fa; }
     .clear-btn { background: #ef4444; color: white; }
     .clear-btn:hover { background: #f87171; }
+    .key-btn { background: #10b981; color: white; }
+    .key-btn:hover { background: #34d399; }
   </style>
 </head>
 <body>
@@ -114,6 +116,7 @@
     <button onclick="document.getElementById('imageInput').click()" class="img-btn">📷</button>
     <button onclick="sendMessage()" class="send-btn">שלח</button>
     <button onclick="clearChat()" class="clear-btn">🗑</button>
+    <button onclick="setApiKey()" class="key-btn">🔑</button>
   </div>
 
   <script>
@@ -124,10 +127,10 @@
 
     let apiKey = localStorage.getItem('openai_api_key');
     if (!apiKey) {
-      apiKey = prompt("הזן את מפתח ה־API שלך (sk-...)");
-      if (apiKey) localStorage.setItem('openai_api_key', apiKey);
+      setApiKey(); // יבקש מפתח בפעם הראשונה
+    } else {
+      updateStatus(true);
     }
-    updateStatus(!!apiKey);
 
     // ✅ ההגדרה המובנית של המייסד
     let conversationHistory = [
@@ -154,10 +157,20 @@
       statusText.textContent = online ? 'מחובר' : 'מנותק';
     }
 
+    function setApiKey() {
+      const newKey = prompt("הזן את מפתח ה־API שלך (sk-...)");
+      if (newKey) {
+        localStorage.setItem('openai_api_key', newKey);
+        apiKey = newKey;
+        updateStatus(true);
+        alert("המפתח נשמר בהצלחה ✅");
+      }
+    }
+
     function appendMessage(role, text) {
       const div = document.createElement('div');
       div.className = role === 'user' ? 'user-message' : 'bot-message';
-      if (role === 'bot') text = addEmojisToText(text); // הוספת אימוג'ים לבוט
+      if (role === 'bot') text = addEmojisToText(text); 
       div.textContent = text;
       chat.appendChild(div);
       chat.scrollTop = chat.scrollHeight;
