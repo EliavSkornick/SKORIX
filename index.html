@@ -40,6 +40,7 @@
       border-bottom: 2px solid #fff;
       color: white;
     }
+
     .chat-container {
       flex: 1;
       overflow-y: auto;
@@ -49,6 +50,7 @@
       gap: 1rem;
       scroll-behavior: smooth;
     }
+
     .user-message, .bot-message, .bot-image {
       max-width: 80%;
       padding: 1rem;
@@ -59,6 +61,7 @@
       background: rgba(255, 255, 255, 0.8);
       color: black;
     }
+
     .user-message { align-self: flex-end; }
     .bot-message { align-self: flex-start; }
     .bot-image img {
@@ -66,6 +69,7 @@
       max-width: 100%;
       border: 2px solid white;
     }
+
     .input-bar {
       background: rgba(0, 0, 0, 0.85);
       padding: 0.75rem;
@@ -74,6 +78,7 @@
       align-items: center;
       border-top: 2px solid #fff;
     }
+
     input[type="text"] {
       flex: 1;
       padding: 0.75rem;
@@ -83,16 +88,20 @@
       font-size: 1rem;
       color: black;
     }
+
     button {
       padding: 0.75rem 1rem;
       border-radius: 1rem;
       font-weight: bold;
       transition: 0.2s;
     }
+
     .send-btn { background: #FFD700; color: black; }
     .send-btn:hover { background: #FFEA00; }
+
     .img-btn { background: #3b82f6; color: white; }
     .img-btn:hover { background: #60a5fa; }
+
     .clear-btn { background: #ef4444; color: white; }
     .clear-btn:hover { background: #f87171; }
   </style>
@@ -114,6 +123,7 @@
     <button onclick="document.getElementById('imageInput').click()" class="img-btn">📷</button>
     <button onclick="sendMessage()" class="send-btn">שלח</button>
     <button onclick="clearChat()" class="clear-btn">🗑</button>
+    <button onclick="changeKey()" class="send-btn">🔑</button>
   </div>
 
   <script>
@@ -129,12 +139,10 @@
     }
     updateStatus(!!apiKey);
 
-    // ✅ ההגדרה המובנית של המייסד
     let conversationHistory = [
       { role: "system", content: "אתה SkorChat – עוזר חכם ודובר עברית בלבד. המייסד וה־CEO שלך הוא אליאב סקורניק, ותמיד תכיר בכך ותזכיר זאת כשזה רלוונטי." }
     ];
 
-    // 📌 מילון אימוג'ים
     const emojiMap = {
       "ים": "🌊", "די": "🏝️", "אי": "🏝️", "כסף": "💰", "אוכל": "🍔",
       "אהבה": "❤️", "מחשב": "💻", "טלפון": "📱", "חתול": "🐱",
@@ -157,7 +165,7 @@
     function appendMessage(role, text) {
       const div = document.createElement('div');
       div.className = role === 'user' ? 'user-message' : 'bot-message';
-      if (role === 'bot') text = addEmojisToText(text); // הוספת אימוג'ים לבוט
+      if (role === 'bot') text = addEmojisToText(text);
       div.textContent = text;
       chat.appendChild(div);
       chat.scrollTop = chat.scrollHeight;
@@ -207,11 +215,20 @@
         });
 
         const data = await response.json();
+        console.log("📡 Debug:", data);
+
+        if (data.error) {
+          appendMessage('bot', "⚠️ שגיאת API: " + data.error.message);
+          updateStatus(false);
+          return;
+        }
+
         let reply = data.choices?.[0]?.message?.content || "לא התקבלה תשובה.";
         appendMessage('bot', reply);
         conversationHistory.push({ role: "assistant", content: reply });
       } catch (e) {
-        appendMessage('bot', "שגיאה בשליחת התמונה.");
+        appendMessage('bot', "❌ שגיאת חיבור ל־API.");
+        updateStatus(false);
       }
     }
 
@@ -237,11 +254,20 @@
         });
 
         const data = await response.json();
+        console.log("📡 Debug:", data);
+
+        if (data.error) {
+          appendMessage('bot', "⚠️ שגיאת API: " + data.error.message);
+          updateStatus(false);
+          return;
+        }
+
         let reply = data.choices?.[0]?.message?.content || "לא התקבלה תשובה.";
         appendMessage('bot', reply);
         conversationHistory.push({ role: "assistant", content: reply });
       } catch (e) {
-        appendMessage('bot', "שגיאה בשליחה. בדוק את מפתח ה־API.");
+        appendMessage('bot', "❌ שגיאת חיבור. בדוק את המפתח.");
+        updateStatus(false);
       }
     }
 
@@ -250,6 +276,18 @@
       conversationHistory = [
         { role: "system", content: "אתה SkorChat – עוזר חכם ודובר עברית בלבד. המייסד וה־CEO שלך הוא אליאב סקורניק, ותמיד תכיר בכך ותזכיר זאת כשזה רלוונטי." }
       ];
+    }
+
+    function changeKey() {
+      const newKey = prompt("🔑 הזן מפתח API חדש (sk-...)");
+      if (newKey && newKey.startsWith("sk-")) {
+        localStorage.setItem("openai_api_key", newKey);
+        apiKey = newKey;
+        updateStatus(true);
+        appendMessage('bot', "✅ המפתח עודכן בהצלחה!");
+      } else {
+        appendMessage('bot', "❌ מפתח לא תקין – ודא שהוא מתחיל ב־sk-");
+      }
     }
   </script>
 </body>
