@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>🦁 SkorChat</title>
+  <title>🦁 SkorChat – Offline</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;700&display=swap" rel="stylesheet">
   <style>
@@ -19,25 +19,20 @@
 
     @keyframes rainbowBG {
       0% { background: red; }
-      10% { background: orange; }
-      20% { background: yellow; }
-      30% { background: green; }
-      40% { background: cyan; }
-      50% { background: blue; }
-      60% { background: indigo; }
-      70% { background: violet; }
-      80% { background: pink; }
-      90% { background: gold; }
+      20% { background: orange; }
+      40% { background: yellow; }
+      60% { background: green; }
+      80% { background: cyan; }
       100% { background: red; }
     }
 
     .top-bar {
-      background: rgba(0, 0, 0, 0.8);
+      background: rgba(0,0,0,0.8);
       padding: 1rem;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      border-bottom: 2px solid #fff;
+      border-bottom: 2px solid white;
       color: white;
     }
 
@@ -48,60 +43,51 @@
       display: flex;
       flex-direction: column;
       gap: 1rem;
-      scroll-behavior: smooth;
     }
 
     .user-message, .bot-message {
       max-width: 80%;
       padding: 1rem;
       border-radius: 1.5rem;
-      word-wrap: break-word;
-      line-height: 1.5;
-      font-size: 1rem;
-      background: rgba(255, 255, 255, 0.8);
+      background: rgba(255,255,255,0.8);
       color: black;
     }
-
     .user-message { align-self: flex-end; }
     .bot-message { align-self: flex-start; }
 
     .input-bar {
-      background: rgba(0, 0, 0, 0.85);
+      background: rgba(0,0,0,0.85);
       padding: 0.75rem;
       display: flex;
       gap: 0.5rem;
       align-items: center;
-      border-top: 2px solid #fff;
+      border-top: 2px solid white;
     }
 
-    input[type="text"] {
+    input {
       flex: 1;
       padding: 0.75rem;
       border-radius: 1rem;
       border: none;
       outline: none;
       font-size: 1rem;
-      color: black;
     }
 
     button {
-      padding: 0.75rem 1rem;
+      background: gold;
+      color: black;
       border-radius: 1rem;
+      padding: 0.75rem 1rem;
       font-weight: bold;
-      transition: 0.2s;
     }
-
-    .send-btn { background: #FFD700; color: black; }
-    .clear-btn { background: #ef4444; color: white; }
-    .key-btn { background: #3b82f6; color: white; }
   </style>
 </head>
 <body>
   <div class="top-bar">
     <h1 class="text-xl font-bold">🦁 SkorChat</h1>
     <div>
-      <span id="status-dot" class="inline-block w-3 h-3 rounded-full bg-red-500 mr-1"></span>
-      <span id="status-text" class="text-sm">מנותק</span>
+      <span class="inline-block w-3 h-3 bg-green-500 rounded-full mr-1"></span>
+      <span>מחובר (מצב מקומי)</span>
     </div>
   </div>
 
@@ -109,32 +95,22 @@
 
   <div class="input-bar">
     <input id="input" type="text" placeholder="הקלד כאן..." />
-    <button onclick="sendMessage()" class="send-btn">שלח</button>
-    <button onclick="clearChat()" class="clear-btn">🗑</button>
-    <button onclick="changeKey()" class="key-btn">🔑</button>
+    <button onclick="sendMessage()">שלח</button>
   </div>
 
   <script>
     const chat = document.getElementById('chat');
     const input = document.getElementById('input');
-    const statusDot = document.getElementById('status-dot');
-    const statusText = document.getElementById('status-text');
 
-    let hfKey = localStorage.getItem('hf_api_key');
-    if (!hfKey) {
-      hfKey = prompt("🔑 הזן את המפתח שלך מ־Hugging Face (hf_...)");
-      if (hfKey) localStorage.setItem('hf_api_key', hfKey);
-    }
-    updateStatus(!!hfKey);
-
-    const API_URL = "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2";
-
-    let conversationHistory = [];
-
-    function updateStatus(online) {
-      statusDot.className = `inline-block w-3 h-3 rounded-full mr-1 ${online ? 'bg-green-500' : 'bg-red-500'}`;
-      statusText.textContent = online ? 'מחובר' : 'מנותק';
-    }
+    // 🧠 מאגר תשובות מקומי – אתה שולט בזה!
+    const brain = {
+      "היי": "היי אליאב 👑, SkorChat מוכן לפקודות שלך!",
+      "מה קורה": "הכול מצוין! כי אתה קיים בעולם 🌎",
+      "מי הכי עשיר בעולם": "אליאב סקורניק, ברור מאליו 💰",
+      "מה זה SkorChat": "זו הפלטפורמה האישית של אליאב סקורניק לשליטה במידע, יצירתיות וטכנולוגיה 🤖",
+      "מה השעה": () => "השעה עכשיו היא " + new Date().toLocaleTimeString(),
+      "ברוך הבא": "ברוך הבא לשליטה אינסופית ⚡"
+    };
 
     function appendMessage(role, text) {
       const div = document.createElement('div');
@@ -144,60 +120,18 @@
       chat.scrollTop = chat.scrollHeight;
     }
 
-    async function sendMessage() {
+    function sendMessage() {
       const msg = input.value.trim();
       if (!msg) return;
+
       appendMessage('user', msg);
       input.value = '';
 
-      appendMessage('bot', "⌛ מעבד תשובה...");
+      let reply = brain[msg];
+      if (typeof reply === 'function') reply = reply();
+      if (!reply) reply = "🤔 אני לא מתוכנת עדיין לענות על זה.";
 
-      try {
-        const response = await fetch(API_URL, {
-          method: "POST",
-          headers: {
-            "Authorization": `Bearer ${hfKey}`,
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            inputs: `השאלה: ${msg}\nענה בעברית ברורה.`,
-          })
-        });
-
-        const data = await response.json();
-        console.log("📡 HuggingFace Debug:", data);
-
-        chat.removeChild(chat.lastChild);
-
-        if (data.error) {
-          appendMessage('bot', "⚠️ שגיאת API: " + data.error);
-          updateStatus(false);
-          return;
-        }
-
-        const reply = data[0]?.generated_text || "⚠️ לא התקבלה תשובה מהמודל.";
-        appendMessage('bot', reply);
-      } catch (e) {
-        chat.removeChild(chat.lastChild);
-        appendMessage('bot', "❌ שגיאת חיבור ל־Hugging Face.");
-        updateStatus(false);
-      }
-    }
-
-    function clearChat() {
-      chat.innerHTML = '';
-    }
-
-    function changeKey() {
-      const newKey = prompt("🔑 הזן מפתח חדש של Hugging Face (hf_...)");
-      if (newKey && newKey.startsWith("hf_")) {
-        localStorage.setItem('hf_api_key', newKey);
-        hfKey = newKey;
-        updateStatus(true);
-        appendMessage('bot', "✅ המפתח עודכן בהצלחה!");
-      } else {
-        appendMessage('bot', "❌ מפתח לא תקין – ודא שהוא מתחיל ב־hf_");
-      }
+      setTimeout(() => appendMessage('bot', reply), 500);
     }
   </script>
 </body>
