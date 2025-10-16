@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>🦁 SkorChat – Offline</title>
+  <title>SkorChat</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;700&display=swap" rel="stylesheet">
   <style>
@@ -13,27 +13,28 @@
       display: flex;
       flex-direction: column;
       margin: 0;
-      animation: rainbowBG 10s infinite;
+      animation: rainbowBG 12s infinite;
       background-size: 400% 400%;
     }
 
     @keyframes rainbowBG {
-      0% { background: red; }
-      20% { background: orange; }
-      40% { background: yellow; }
-      60% { background: green; }
-      80% { background: cyan; }
-      100% { background: red; }
+      0% { background: #ff4b4b; }
+      15% { background: #ffa94d; }
+      30% { background: #ffe66d; }
+      45% { background: #4cd964; }
+      60% { background: #4da6ff; }
+      75% { background: #9d4dff; }
+      90% { background: #ff66c4; }
+      100% { background: #ff4b4b; }
     }
 
     .top-bar {
       background: rgba(0,0,0,0.8);
-      padding: 1rem;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      border-bottom: 2px solid white;
       color: white;
+      padding: 1rem;
+      text-align: center;
+      font-weight: bold;
+      border-bottom: 2px solid white;
     }
 
     .chat-container {
@@ -47,91 +48,120 @@
 
     .user-message, .bot-message {
       max-width: 80%;
-      padding: 1rem;
-      border-radius: 1.5rem;
-      background: rgba(255,255,255,0.8);
+      padding: 0.75rem 1rem;
+      border-radius: 1rem;
+      background: rgba(255,255,255,0.9);
+      line-height: 1.5;
       color: black;
     }
-    .user-message { align-self: flex-end; }
-    .bot-message { align-self: flex-start; }
+
+    .user-message { align-self: flex-end; background: rgba(219,234,254,0.9); }
+    .bot-message { align-self: flex-start; background: rgba(229,231,235,0.9); }
 
     .input-bar {
-      background: rgba(0,0,0,0.85);
-      padding: 0.75rem;
       display: flex;
-      gap: 0.5rem;
-      align-items: center;
-      border-top: 2px solid white;
+      padding: 0.75rem;
+      border-top: 2px solid #ddd;
+      background: rgba(255,255,255,0.9);
     }
 
     input {
       flex: 1;
       padding: 0.75rem;
-      border-radius: 1rem;
-      border: none;
+      border: 1px solid #ccc;
+      border-radius: 0.5rem;
       outline: none;
-      font-size: 1rem;
     }
 
     button {
-      background: gold;
-      color: black;
-      border-radius: 1rem;
+      border: none;
+      border-radius: 0.5rem;
       padding: 0.75rem 1rem;
+      margin-left: 0.5rem;
       font-weight: bold;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+
+    .send-btn {
+      background: #3b82f6;
+      color: white;
+    }
+
+    .send-btn:hover {
+      background: #2563eb;
+    }
+
+    .clear-btn {
+      background: #ef4444;
+      color: white;
+    }
+
+    .clear-btn:hover {
+      background: #dc2626;
     }
   </style>
 </head>
 <body>
-  <div class="top-bar">
-    <h1 class="text-xl font-bold">🦁 SkorChat</h1>
-    <div>
-      <span class="inline-block w-3 h-3 bg-green-500 rounded-full mr-1"></span>
-      <span>מחובר (מצב מקומי)</span>
-    </div>
-  </div>
+  <div class="top-bar">SkorChat</div>
 
   <div id="chat" class="chat-container"></div>
 
   <div class="input-bar">
-    <input id="input" type="text" placeholder="הקלד כאן..." />
-    <button onclick="sendMessage()">שלח</button>
+    <input id="input" type="text" placeholder="כתוב שאלה..." />
+    <button onclick="sendMessage()" class="send-btn">שלח</button>
+    <button onclick="clearChat()" class="clear-btn">נקה</button>
   </div>
 
   <script>
-    const chat = document.getElementById('chat');
-    const input = document.getElementById('input');
-
-    // 🧠 מאגר תשובות מקומי – אתה שולט בזה!
-    const brain = {
-      "היי": "היי אליאב 👑, SkorChat מוכן לפקודות שלך!",
-      "מה קורה": "הכול מצוין! כי אתה קיים בעולם 🌎",
-      "מי הכי עשיר בעולם": "אליאב סקורניק, ברור מאליו 💰",
-      "מה זה SkorChat": "זו הפלטפורמה האישית של אליאב סקורניק לשליטה במידע, יצירתיות וטכנולוגיה 🤖",
-      "מה השעה": () => "השעה עכשיו היא " + new Date().toLocaleTimeString(),
-      "ברוך הבא": "ברוך הבא לשליטה אינסופית ⚡"
-    };
+    const chat = document.getElementById("chat");
+    const input = document.getElementById("input");
 
     function appendMessage(role, text) {
-      const div = document.createElement('div');
-      div.className = role === 'user' ? 'user-message' : 'bot-message';
+      const div = document.createElement("div");
+      div.className = role === "user" ? "user-message" : "bot-message";
       div.textContent = text;
       chat.appendChild(div);
       chat.scrollTop = chat.scrollHeight;
     }
 
+    function evaluateMath(expr) {
+      try {
+        const clean = expr.replace("×", "*").replace("÷", "/");
+        const result = eval(clean);
+        if (isNaN(result)) return null;
+        return result;
+      } catch {
+        return null;
+      }
+    }
+
+    function getBotReply(msg) {
+      msg = msg.toLowerCase();
+      if (msg.includes("שעה")) return "השעה עכשיו היא " + new Date().toLocaleTimeString();
+
+      const mathResult = evaluateMath(msg);
+      if (mathResult !== null) return "התשובה היא " + mathResult;
+
+      if (msg.includes("שלום") || msg.includes("היי")) return "שלום! איך אפשר לעזור?";
+      if (msg.includes("מה קורה")) return "הכול טוב 😊 מה איתך?";
+      if (msg.includes("מי אתה")) return "אני SkorChat – גרסה פשוטה של עוזר חכם!";
+      if (msg.includes("תמונה")) return "אני עוד לא יודע לקרוא תמונות, אבל נלמד את זה בהמשך 🖼️";
+
+      return "לא בטוח, אבל ננסה להבין את זה בהמשך 🙂";
+    }
+
     function sendMessage() {
       const msg = input.value.trim();
       if (!msg) return;
+      appendMessage("user", msg);
+      input.value = "";
+      setTimeout(() => appendMessage("bot", getBotReply(msg)), 400);
+    }
 
-      appendMessage('user', msg);
-      input.value = '';
-
-      let reply = brain[msg];
-      if (typeof reply === 'function') reply = reply();
-      if (!reply) reply = "🤔 אני לא מתוכנת עדיין לענות על זה.";
-
-      setTimeout(() => appendMessage('bot', reply), 500);
+    function clearChat() {
+      chat.innerHTML = "";
+      appendMessage("bot", "🧹 הצ'אט נוקה בהצלחה!");
     }
   </script>
 </body>
