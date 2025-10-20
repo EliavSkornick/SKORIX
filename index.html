@@ -1,189 +1,1701 @@
-// server.js
-import express from 'express';
-import cors from 'cors';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import { config } from 'dotenv';
-import { OpenAI } from 'openai';
-
-config(); // Load .env file
-
-const app = express();
-app.use(cors());
-app.use(express.json());
-
-// OpenAI client setup
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
-
-// Serve the chat webpage at /
-app.get('/', (req, res) => {
-  res.send(`
 <!DOCTYPE html>
-<html lang="en">
+<html lang="he" dir="rtl">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>SkorChat - AI Chat</title>
-<style>
-  body {
-    font-family: Arial, sans-serif;
-    background: #f4f7fa;
-    margin: 0;
-    display: flex;
-    flex-direction: column;
-    height: 100vh;
-  }
-  header {
-    background-color: #0052cc;
-    color: white;
-    padding: 1rem;
-    text-align: center;
-    font-size: 1.8rem;
-    font-weight: bold;
-  }
-  #chat-container {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    padding: 1rem;
-    overflow-y: auto;
-  }
-  .message {
-    max-width: 70%;
-    margin-bottom: 1rem;
-    padding: 0.8rem 1rem;
-    border-radius: 15px;
-    line-height: 1.4;
-  }
-  .user {
-    background-color: #0052cc;
-    color: white;
-    align-self: flex-end;
-    border-bottom-right-radius: 0;
-  }
-  .bot {
-    background-color: #e4e6eb;
-    color: #333;
-    align-self: flex-start;
-    border-bottom-left-radius: 0;
-  }
-  #input-area {
-    display: flex;
-    padding: 1rem;
-    background: white;
-    border-top: 1px solid #ccc;
-  }
-  #user-input {
-    flex: 1;
-    padding: 0.8rem 1rem;
-    font-size: 1rem;
-    border: 1px solid #ccc;
-    border-radius: 20px;
-    outline: none;
-  }
-  #send-btn {
-    background-color: #0052cc;
-    border: none;
-    color: white;
-    padding: 0 20px;
-    font-size: 1.2rem;
-    margin-left: 0.5rem;
-    border-radius: 20px;
-    cursor: pointer;
-    transition: background-color 0.3s ease;
-  }
-  #send-btn:hover {
-    background-color: #003d99;
-  }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SkorChat AI - עוזר AI מתקדם</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        :root {
+            --primary-color: #6366f1;
+            --secondary-color: #4f46e5;
+            --accent-color: #8b5cf6;
+            --light-bg: #f8fafc;
+            --dark-bg: #0f172a;
+            --light-text: #1e293b;
+            --dark-text: #e2e8f0;
+            --message-bg: #e2e8f0;
+            --user-message-bg: #6366f1;
+            --user-message-text: #ffffff;
+            --sidebar-bg: #1e293b;
+            --code-bg: #1e293b;
+            --border-color: #e2e8f0;
+        }
+
+        [data-theme="dark"] {
+            --light-bg: #0f172a;
+            --dark-bg: #f8fafc;
+            --light-text: #e2e8f0;
+            --dark-text: #1e293b;
+            --message-bg: #1e293b;
+            --user-message-bg: #4f46e5;
+            --user-message-text: #ffffff;
+            --sidebar-bg: #1e293b;
+            --code-bg: #334155;
+            --border-color: #334155;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--light-bg);
+            color: var(--light-text);
+            height: 100vh;
+            overflow: hidden;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .app-container {
+            display: flex;
+            height: 100vh;
+        }
+
+        .sidebar {
+            width: 280px;
+            background-color: var(--sidebar-bg);
+            color: white;
+            padding: 20px;
+            overflow-y: auto;
+            transition: transform 0.3s;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            background: linear-gradient(45deg, #6366f1, #8b5cf6);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .logo i {
+            margin-left: 8px;
+            background: linear-gradient(45deg, #6366f1, #8b5cf6);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .new-chat-btn {
+            background: linear-gradient(45deg, #6366f1, #8b5cf6);
+            border: none;
+            color: white;
+            padding: 12px 15px;
+            border-radius: 10px;
+            cursor: pointer;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+            transition: transform 0.2s, box-shadow 0.2s;
+            font-weight: 500;
+        }
+
+        .new-chat-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+
+        .chat-history {
+            margin-top: 10px;
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .chat-history-item {
+            padding: 12px;
+            margin-bottom: 8px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .chat-history-item:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .chat-history-item.active {
+            background-color: rgba(99, 102, 241, 0.2);
+            color: white;
+        }
+
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            background-color: var(--light-bg);
+        }
+
+        .chat-header {
+            padding: 15px 20px;
+            background-color: var(--sidebar-bg);
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .chat-header-title {
+            font-size: 18px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+        }
+
+        .chat-header-title .status-indicator {
+            width: 8px;
+            height: 8px;
+            background-color: #10b981;
+            border-radius: 50%;
+            margin-right: 8px;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .chat-header-actions {
+            display: flex;
+            gap: 15px;
+        }
+
+        .chat-header-actions button {
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+            font-size: 18px;
+            transition: transform 0.2s;
+        }
+
+        .chat-header-actions button:hover {
+            transform: scale(1.1);
+        }
+
+        .messages-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .message {
+            display: flex;
+            gap: 12px;
+            max-width: 80%;
+            animation: fadeIn 0.3s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .message.user {
+            align-self: flex-end;
+            flex-direction: row-reverse;
+        }
+
+        .message-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+
+        .user .message-avatar {
+            background: linear-gradient(45deg, #6366f1, #8b5cf6);
+        }
+
+        .assistant .message-avatar {
+            background: linear-gradient(45deg, #6366f1, #8b5cf6);
+        }
+
+        .message-content {
+            padding: 15px 18px;
+            border-radius: 18px;
+            background-color: var(--message-bg);
+            color: var(--light-text);
+            word-wrap: break-word;
+            position: relative;
+        }
+
+        .user .message-content {
+            background: linear-gradient(45deg, #6366f1, #8b5cf6);
+            color: var(--user-message-text);
+        }
+
+        .message-time {
+            font-size: 11px;
+            opacity: 0.7;
+            margin-top: 4px;
+        }
+
+        .typing-indicator {
+            display: none;
+            align-items: center;
+            gap: 4px;
+            padding: 15px 18px;
+            border-radius: 18px;
+            background-color: var(--message-bg);
+            width: fit-content;
+        }
+
+        .typing-indicator.active {
+            display: flex;
+        }
+
+        .typing-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: var(--primary-color);
+            animation: typing 1.4s infinite;
+        }
+
+        .typing-dot:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .typing-dot:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes typing {
+            0%, 60%, 100% {
+                transform: translateY(0);
+            }
+            30% {
+                transform: translateY(-10px);
+            }
+        }
+
+        .input-container {
+            padding: 20px;
+            background-color: var(--light-bg);
+            border-top: 1px solid var(--border-color);
+        }
+
+        .input-wrapper {
+            display: flex;
+            align-items: center;
+            background-color: var(--message-bg);
+            border-radius: 24px;
+            padding: 8px 16px;
+            gap: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        .message-input {
+            flex: 1;
+            border: none;
+            background: none;
+            outline: none;
+            padding: 10px 0;
+            font-size: 16px;
+            color: var(--light-text);
+        }
+
+        .input-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .input-action-btn {
+            background: none;
+            border: none;
+            color: var(--light-text);
+            cursor: pointer;
+            font-size: 18px;
+            transition: color 0.2s;
+        }
+
+        .input-action-btn:hover {
+            color: var(--primary-color);
+        }
+
+        .send-button {
+            background: linear-gradient(45deg, #6366f1, #8b5cf6);
+            border: none;
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .send-button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+
+        .send-button:disabled {
+            background: #a0a0a0;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .mobile-menu-toggle {
+            display: none;
+            position: fixed;
+            top: 15px;
+            left: 15px;
+            z-index: 1000;
+            background-color: var(--sidebar-bg);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            font-size: 18px;
+            cursor: pointer;
+        }
+
+        .settings-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .settings-modal.active {
+            display: flex;
+        }
+
+        .settings-content {
+            background-color: var(--light-bg);
+            border-radius: 12px;
+            padding: 25px;
+            width: 90%;
+            max-width: 500px;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+        }
+
+        .settings-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .settings-title {
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .close-settings {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--light-text);
+        }
+
+        .settings-section {
+            margin-bottom: 20px;
+        }
+
+        .settings-section-title {
+            font-size: 16px;
+            font-weight: 500;
+            margin-bottom: 10px;
+        }
+
+        .theme-toggle {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 50px;
+            height: 26px;
+            background-color: #ccc;
+            border-radius: 13px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .toggle-switch.active {
+            background-color: var(--primary-color);
+        }
+
+        .toggle-slider {
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 20px;
+            height: 20px;
+            background-color: white;
+            border-radius: 50%;
+            transition: transform 0.3s;
+        }
+
+        .toggle-switch.active .toggle-slider {
+            transform: translateX(24px);
+        }
+
+        .model-select {
+            width: 100%;
+            padding: 10px 12px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            background-color: var(--message-bg);
+            color: var(--light-text);
+        }
+
+        .export-button {
+            background: linear-gradient(45deg, #6366f1, #8b5cf6);
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            font-weight: 500;
+        }
+
+        .export-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+
+        .clear-button {
+            background-color: #ef4444;
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            font-weight: 500;
+        }
+
+        .clear-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+        }
+
+        .code-block {
+            background-color: var(--code-bg);
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+            overflow-x: auto;
+            position: relative;
+        }
+
+        .code-block pre {
+            margin: 0;
+            color: #e2e8f0;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 14px;
+        }
+
+        .code-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            color: #94a3b8;
+            font-size: 12px;
+        }
+
+        .copy-code-btn {
+            background: none;
+            border: none;
+            color: #94a3b8;
+            cursor: pointer;
+            font-size: 14px;
+            transition: color 0.2s;
+        }
+
+        .copy-code-btn:hover {
+            color: #e2e8f0;
+        }
+
+        .image-container {
+            margin: 10px 0;
+            border-radius: 8px;
+            overflow: hidden;
+            max-width: 100%;
+        }
+
+        .generated-image {
+            width: 100%;
+            height: auto;
+            display: block;
+            border-radius: 8px;
+        }
+
+        .image-prompt {
+            font-size: 12px;
+            color: #94a3b8;
+            margin-top: 5px;
+            text-align: center;
+        }
+
+        .capability-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin: 10px 0;
+        }
+
+        .capability-chip {
+            background-color: rgba(99, 102, 241, 0.1);
+            color: var(--primary-color);
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .file-upload-area {
+            border: 2px dashed var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            margin: 10px 0;
+            cursor: pointer;
+            transition: border-color 0.2s;
+        }
+
+        .file-upload-area:hover {
+            border-color: var(--primary-color);
+        }
+
+        .file-upload-area i {
+            font-size: 24px;
+            color: var(--primary-color);
+            margin-bottom: 10px;
+        }
+
+        .file-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 10px;
+            padding: 10px;
+            background-color: var(--message-bg);
+            border-radius: 8px;
+        }
+
+        .file-icon {
+            font-size: 24px;
+            color: var(--primary-color);
+        }
+
+        .file-details {
+            flex: 1;
+        }
+
+        .file-name {
+            font-weight: 500;
+        }
+
+        .file-size {
+            font-size: 12px;
+            color: #94a3b8;
+        }
+
+        .remove-file {
+            background: none;
+            border: none;
+            color: #ef4444;
+            cursor: pointer;
+            font-size: 18px;
+        }
+
+        .memory-indicator {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 12px;
+            color: #94a3b8;
+            margin-top: 5px;
+        }
+
+        .memory-dot {
+            width: 6px;
+            height: 6px;
+            background-color: #10b981;
+            border-radius: 50%;
+        }
+
+        .feature-highlight {
+            background: linear-gradient(45deg, rgba(99, 102, 241, 0.1), rgba(139, 92, 246, 0.1));
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+            border-right: 3px solid var(--primary-color);
+        }
+
+        .feature-title {
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: var(--primary-color);
+        }
+
+        .feature-description {
+            font-size: 14px;
+        }
+
+        .suggestion-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .suggestion-chip {
+            background-color: rgba(99, 102, 241, 0.1);
+            color: var(--primary-color);
+            padding: 8px 12px;
+            border-radius: 20px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .suggestion-chip:hover {
+            background-color: rgba(99, 102, 241, 0.2);
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                position: fixed;
+                left: 0;
+                top: 0;
+                height: 100%;
+                z-index: 999;
+                transform: translateX(-100%);
+            }
+
+            .sidebar.active {
+                transform: translateX(0);
+            }
+
+            .mobile-menu-toggle {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+            .message {
+                max-width: 90%;
+            }
+        }
+    </style>
 </head>
 <body>
+    <div class="app-container">
+        <button class="mobile-menu-toggle" id="mobileMenuToggle">
+            <i class="bi bi-list"></i>
+        </button>
 
-<header>SkorChat AI</header>
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <i class="bi bi-lightning-charge-fill"></i>
+                    <span>SkorChat AI</span>
+                </div>
+            </div>
 
-<div id="chat-container"></div>
+            <button class="new-chat-btn" id="newChatBtn">
+                <i class="bi bi-plus-circle"></i>
+                <span>שיחה חדשה</span>
+            </button>
 
-<div id="input-area">
-  <input type="text" id="user-input" placeholder="Type your message..." autocomplete="off" />
-  <button id="send-btn">Send</button>
-</div>
+            <div class="chat-history" id="chatHistory">
+                <!-- Chat history items will be added here dynamically -->
+            </div>
+        </aside>
 
-<script>
-  const chatContainer = document.getElementById('chat-container');
-  const userInput = document.getElementById('user-input');
-  const sendBtn = document.getElementById('send-btn');
+        <main class="main-content">
+            <header class="chat-header">
+                <div class="chat-header-title">
+                    <div class="status-indicator"></div>
+                    <span id="chatTitle">שיחה חדשה</span>
+                </div>
+                <div class="chat-header-actions">
+                    <button id="memoryBtn" title="זיכרון">
+                        <i class="bi bi-memory"></i>
+                    </button>
+                    <button id="settingsBtn" title="הגדרות">
+                        <i class="bi bi-gear"></i>
+                    </button>
+                    <button id="exportBtn" title="ייצוא שיחה">
+                        <i class="bi bi-download"></i>
+                    </button>
+                </div>
+            </header>
 
-  function appendMessage(text, sender) {
-    const messageDiv = document.createElement('div');
-    messageDiv.classList.add('message', sender);
-    messageDiv.textContent = text;
-    chatContainer.appendChild(messageDiv);
-    chatContainer.scrollTop = chatContainer.scrollHeight;
-  }
+            <div class="messages-container" id="messagesContainer">
+                <div class="message assistant">
+                    <div class="message-avatar">
+                        <i class="bi bi-robot"></i>
+                    </div>
+                    <div>
+                        <div class="message-content">
+                            <div>ברוך הבא ל-SkorChat AI! אני עוזר הAI המתקדם שלך עם יכולות חשיבה מתקדמות, זיכרון ארוך טווח, ויכולת יצירת תמונות.</div>
+                            <div class="capability-chips">
+                                <div class="capability-chip">ניתוח מתקדם</div>
+                                <div class="capability-chip">יצירת תמונות</div>
+                                <div class="capability-chip">זיכרון ארוך טווח</div>
+                                <div class="capability-chip">עיבוד קבצים</div>
+                                <div class="capability-chip">כתיבת קוד</div>
+                            </div>
+                            <div class="feature-highlight">
+                                <div class="feature-title">יכולות מתקדמות</div>
+                                <div class="feature-description">אני יכול לזכור את השיחות הקודמות שלנו, לנתח קבצים, ליצור תמונות מתיאורים, לכתוב קוד, ועוד רבות אחרות. איך אני יכול לעזור לך היום?</div>
+                            </div>
+                            <div class="suggestion-chips">
+                                <div class="suggestion-chip" data-suggestion="צור לי תמונה של יער קסום בלילה">צור תמונה</div>
+                                <div class="suggestion-chip" data-suggestion="כתוב לי קוד לאפליקציית טודו ליסט">כתוב קוד</div>
+                                <div class="suggestion-chip" data-suggestion="הסבר לי על תורת היחסות הכללית">הסבר מושג</div>
+                                <div class="suggestion-chip" data-suggestion="נתח את המסמך שאני אעלה">נתח קובץ</div>
+                            </div>
+                        </div>
+                        <div class="message-time">עכשיו</div>
+                    </div>
+                </div>
+            </div>
 
-  async function sendMessage() {
-    const text = userInput.value.trim();
-    if (!text) return;
-    appendMessage(text, 'user');
-    userInput.value = '';
-    userInput.disabled = true;
-    sendBtn.disabled = true;
+            <div class="typing-indicator" id="typingIndicator">
+                <div class="typing-dot"></div>
+                <div class="typing-dot"></div>
+                <div class="typing-dot"></div>
+            </div>
 
-    try {
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ message: text })
-      });
-      const data = await response.json();
-      appendMessage(data.reply, 'bot');
-    } catch (error) {
-      appendMessage("Error: Unable to get response.", 'bot');
-      console.error(error);
-    } finally {
-      userInput.disabled = false;
-      sendBtn.disabled = false;
-      userInput.focus();
-    }
-  }
+            <div class="input-container">
+                <div class="input-wrapper">
+                    <input type="text" class="message-input" id="messageInput" placeholder="כתוב הודעה..." autocomplete="off">
+                    <div class="input-actions">
+                        <button class="input-action-btn" id="attachBtn" title="צרף קובץ">
+                            <i class="bi bi-paperclip"></i>
+                        </button>
+                        <button class="input-action-btn" id="imageBtn" title="צור תמונה">
+                            <i class="bi bi-image"></i>
+                        </button>
+                        <button class="input-action-btn" id="codeBtn" title="הכנס קוד">
+                            <i class="bi bi-code-slash"></i>
+                        </button>
+                    </div>
+                    <button class="send-button" id="sendButton">
+                        <i class="bi bi-send"></i>
+                    </button>
+                </div>
+            </div>
+        </main>
+    </div>
 
-  sendBtn.addEventListener('click', sendMessage);
-  userInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') sendMessage();
-  });
+    <div class="settings-modal" id="settingsModal">
+        <div class="settings-content">
+            <div class="settings-header">
+                <h2 class="settings-title">הגדרות</h2>
+                <button class="close-settings" id="closeSettings">
+                    <i class="bi bi-x"></i>
+                </button>
+            </div>
 
-  userInput.focus();
-</script>
+            <div class="settings-section">
+                <h3 class="settings-section-title">מראה</h3>
+                <div class="theme-toggle">
+                    <span>מצב כהה</span>
+                    <div class="toggle-switch" id="themeToggle">
+                        <div class="toggle-slider"></div>
+                    </div>
+                </div>
+            </div>
 
+            <div class="settings-section">
+                <h3 class="settings-section-title">מודל AI</h3>
+                <select class="model-select" id="modelSelect">
+                    <option value="skorchat-ultra">SkorChat Ultra (מתקדם)</option>
+                    <option value="skorchat-pro">SkorChat Pro</option>
+                    <option value="skorchat-creative">SkorChat Creative</option>
+                    <option value="skorchat-analytical">SkorChat Analytical</option>
+                </select>
+            </div>
+
+            <div class="settings-section">
+                <h3 class="settings-section-title">זיכרון</h3>
+                <div class="theme-toggle">
+                    <span>שמור היסטוריית שיחות</span>
+                    <div class="toggle-switch active" id="memoryToggle">
+                        <div class="toggle-slider"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="settings-section">
+                <h3 class="settings-section-title">ניהול שיחות</h3>
+                <button class="export-button" id="exportAllBtn">ייצא את כל השיחות</button>
+                <button class="clear-button" id="clearAllBtn" style="margin-right: 10px;">נקה את כל השיחות</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // DOM Elements
+            const messageInput = document.getElementById('messageInput');
+            const sendButton = document.getElementById('sendButton');
+            const messagesContainer = document.getElementById('messagesContainer');
+            const typingIndicator = document.getElementById('typingIndicator');
+            const newChatBtn = document.getElementById('newChatBtn');
+            const chatHistory = document.getElementById('chatHistory');
+            const chatTitle = document.getElementById('chatTitle');
+            const mobileMenuToggle = document.getElementById('mobileMenuToggle');
+            const sidebar = document.getElementById('sidebar');
+            const settingsBtn = document.getElementById('settingsBtn');
+            const settingsModal = document.getElementById('settingsModal');
+            const closeSettings = document.getElementById('closeSettings');
+            const themeToggle = document.getElementById('themeToggle');
+            const memoryToggle = document.getElementById('memoryToggle');
+            const modelSelect = document.getElementById('modelSelect');
+            const exportBtn = document.getElementById('exportBtn');
+            const exportAllBtn = document.getElementById('exportAllBtn');
+            const clearAllBtn = document.getElementById('clearAllBtn');
+            const attachBtn = document.getElementById('attachBtn');
+            const imageBtn = document.getElementById('imageBtn');
+            const codeBtn = document.getElementById('codeBtn');
+            const memoryBtn = document.getElementById('memoryBtn');
+
+            // State
+            let currentChatId = generateId();
+            let chats = JSON.parse(localStorage.getItem('skorChats')) || {};
+            let isTyping = false;
+            let memoryEnabled = true;
+            let attachedFile = null;
+            let codeMode = false;
+
+            // Knowledge base for advanced responses
+            const knowledgeBase = {
+                science: {
+                    physics: [
+                        "תורת היחסות הכללית, שפותחה על ידי אלברט איינשטיין, מתארת את הכבידה כעיקום של מרחב-זמן הנגרם על ידי מסה ואנרגיה.",
+                        "מכניקת הקוונטים היא תיאוריה פיזיקלית העוסקת בתכונותיהם של חלקיקים בסקאלה האטומית והתת-אטומית.",
+                        "החוק השני של התרמודינמיקה קובע שהאנטרופיה (מידת אי-הסדר) של מערכת מבודדת תמיד עולה או נשארת קבועה."
+                    ],
+                    chemistry: [
+                        "הטבלה המחזורית מארגנת את כל היסודות הכימיים הידועים לפי מספר אטומי, תצורת אלקטרונים ותכונות כימיות חוזרות.",
+                        "הקשרים הכימיים הם כוחות המחזיקים אטומים יחד, והם יכולים להיות קובלנטיים, יוניים, מתכתיים או מימניים.",
+                        "תגובות חמצון-חיזור (רדוקס) כרוכות בהעברת אלקטרונים בין מגיבים."
+                    ],
+                    biology: [
+                        "ה-DNA (חומצה דאוקסיריבונוקלאית) הוא המולקולה הנושאת את המידע הגנטי בכל יצור חי.",
+                        "הפוטוסינתזה הוא התהליך שבו צמחים משתמשים באור השמש, מים ופחמן דו-חמצני כדי לייצר גלוקוז וחמצן.",
+                        "האבולוציה על פי תורת הברירה הטבעית של דרווין היא התהליך שבו אורגניזמים משתנים לאורך דורות כתוצאה משינויים בתכונות הניתנות להורשה."
+                    ]
+                },
+                technology: {
+                    programming: [
+                        "מודל התכנות מונחה-עצמים (OOP) מבוסס על מושגים כמו מחלקות, אובייקטים, ירושה ופולימורפיזם.",
+                        "אלגוריתמים יעילים הם הבסיס לתוכנות מוצלחות, והם קובעים את מורכבות הזמן והמקום של התוכנית.",
+                        "מבני נתונים כמו מערכים, רשימות מקושרות, עצים וגרפים מאפשרים ארגון יעיל של מידע בזיכרון המחשב."
+                    ],
+                    ai: [
+                        "למידת מכונה היא תת-תחום של בינה מלאכותית המאפשר למחשבים ללמוד מנתונים מבלי להיות מתוכנתים באופן מפורש.",
+                        "רשתות נוירונים מלאכותיות מדמות את המבנה של המוח האנושי ומשמשות בסיס ללמידה עמוקה.",
+                        "עיבוד שפה טבעית (NLP) מאפשר למחשבים להבין, לפרש ולייצר שפה אנושית."
+                    ],
+                    web: [
+                        "HTML, CSS ו-JavaScript הן שלוש הטכנולוגיות הבסיסיות של פיתוח אתרים.",
+                        "מסגרות כמו React, Angular ו-Vue מפשטות את פיתוח ממשקי משתמש מורכבים.",
+                        "RESTful APIs מאפשרים תקשורת יעילה בין לקוחות ושרתים באינטרנט."
+                    ]
+                },
+                history: [
+                    "המהפכה התעשייתית, שהחלה בבריטניה במאה ה-18, שינתה את דרכי הייצור והובילה לעיור מואץ.",
+                    "מלחמת העולם השנייה (1939-1945) הייתה הסכסוך הגלובלי הקטלני ביותר בהיסטוריה האנושית.",
+                    "נפילת חומת ברלין ב-1989 סימלה את סוף המלחמה הקרה ואיחוד גרמניה מחדש."
+                ],
+                philosophy: [
+                    "הדילמה של טרולי החשבונית בוחנת את האפשרות שכל המציאות היא סימולציה ממוחשבת.",
+                    "הפרדוקס של הספינה של תסאוס מעלה שאלות על זהות ושינוי לאורך זמן.",
+                    "הניסוי המחשבתי של חדר הסיני של ג'ון סירל טוען שתחביר לבדו אינו מספיק ליצירת הבנה אמיתית."
+                ]
+            };
+
+            // Initialize
+            loadTheme();
+            loadModel();
+            loadMemorySettings();
+            loadChats();
+            loadChat(currentChatId);
+
+            // Event Listeners
+            sendButton.addEventListener('click', sendMessage);
+            messageInput.addEventListener('keydown', handleKeyDown);
+            newChatBtn.addEventListener('click', createNewChat);
+            mobileMenuToggle.addEventListener('click', toggleSidebar);
+            settingsBtn.addEventListener('click', openSettings);
+            closeSettings.addEventListener('click', closeSettingsModal);
+            themeToggle.addEventListener('click', toggleTheme);
+            memoryToggle.addEventListener('click', toggleMemory);
+            modelSelect.addEventListener('change', saveModel);
+            exportBtn.addEventListener('click', exportCurrentChat);
+            exportAllBtn.addEventListener('click', exportAllChats);
+            clearAllBtn.addEventListener('click', clearAllChats);
+            attachBtn.addEventListener('click', showFileUpload);
+            imageBtn.addEventListener('click', showImagePrompt);
+            codeBtn.addEventListener('click', toggleCodeMode);
+            memoryBtn.addEventListener('click', showMemoryInfo);
+
+            // Suggestion chips event delegation
+            messagesContainer.addEventListener('click', function(e) {
+                if (e.target.classList.contains('suggestion-chip')) {
+                    const suggestion = e.target.getAttribute('data-suggestion');
+                    if (suggestion) {
+                        messageInput.value = suggestion;
+                        sendMessage();
+                    }
+                }
+            });
+
+            // Functions
+            function generateId() {
+                return Date.now().toString(36) + Math.random().toString(36).substr(2);
+            }
+
+            function handleKeyDown(e) {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage();
+                }
+            }
+
+            function sendMessage() {
+                const message = messageInput.value.trim();
+                if (!message || isTyping) return;
+
+                // Handle code mode
+                if (codeMode) {
+                    const codeMessage = `\`\`\`\n${message}\n\`\`\``;
+                    addMessage(codeMessage, 'user');
+                    messageInput.value = '';
+                    codeMode = false;
+                    codeBtn.style.color = 'var(--light-text)';
+                    
+                    showTypingIndicator();
+                    setTimeout(() => {
+                        hideTypingIndicator();
+                        const response = analyzeCode(message);
+                        addMessage(response, 'assistant');
+                    }, 1500 + Math.random() * 2000);
+                    return;
+                }
+
+                // Add user message
+                addMessage(message, 'user');
+                messageInput.value = '';
+
+                // Show typing indicator
+                showTypingIndicator();
+
+                // Simulate AI response
+                setTimeout(() => {
+                    hideTypingIndicator();
+                    const response = generateAdvancedAIResponse(message);
+                    addMessage(response, 'assistant');
+                }, 1000 + Math.random() * 2000);
+            }
+
+            function addMessage(content, sender) {
+                const messageId = generateId();
+                const timestamp = new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' });
+
+                const messageElement = document.createElement('div');
+                messageElement.className = `message ${sender}`;
+                messageElement.id = messageId;
+
+                const avatarElement = document.createElement('div');
+                avatarElement.className = 'message-avatar';
+                avatarElement.innerHTML = sender === 'user' ? '<i class="bi bi-person"></i>' : '<i class="bi bi-robot"></i>';
+
+                const contentContainer = document.createElement('div');
+
+                const contentElement = document.createElement('div');
+                contentElement.className = 'message-content';
+                
+                // Process content for special formatting
+                if (sender === 'assistant') {
+                    contentElement.innerHTML = processAssistantMessage(content);
+                } else {
+                    contentElement.textContent = content;
+                }
+
+                const timeElement = document.createElement('div');
+                timeElement.className = 'message-time';
+                timeElement.textContent = timestamp;
+
+                // Add memory indicator for assistant messages
+                if (sender === 'assistant' && memoryEnabled) {
+                    const memoryIndicator = document.createElement('div');
+                    memoryIndicator.className = 'memory-indicator';
+                    memoryIndicator.innerHTML = '<div class="memory-dot"></div> זיכרון פעיל';
+                    contentContainer.appendChild(memoryIndicator);
+                }
+
+                contentContainer.appendChild(contentElement);
+                contentContainer.appendChild(timeElement);
+
+                messageElement.appendChild(avatarElement);
+                messageElement.appendChild(contentContainer);
+
+                messagesContainer.appendChild(messageElement);
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+                // Save message to current chat
+                if (!chats[currentChatId]) {
+                    chats[currentChatId] = {
+                        id: currentChatId,
+                        title: content.substring(0, 30) + (content.length > 30 ? '...' : ''),
+                        messages: [],
+                        createdAt: new Date().toISOString()
+                    };
+                }
+
+                chats[currentChatId].messages.push({
+                    id: messageId,
+                    content,
+                    sender,
+                    timestamp
+                });
+
+                saveChats();
+                updateChatHistory();
+            }
+
+            function processAssistantMessage(content) {
+                // Process code blocks
+                content = content.replace(/```([\s\S]*?)```/g, (match, code) => {
+                    const language = code.split('\n')[0] || 'text';
+                    const codeContent = code.includes('\n') ? code.substring(code.indexOf('\n') + 1) : code;
+                    
+                    return `
+                        <div class="code-block">
+                            <div class="code-header">
+                                <span>${language}</span>
+                                <button class="copy-code-btn" onclick="copyCode(this)">
+                                    <i class="bi bi-clipboard"></i> העתק
+                                </button>
+                            </div>
+                            <pre>${escapeHtml(codeContent)}</pre>
+                        </div>
+                    `;
+                });
+
+                // Process image generation
+                if (content.includes('[IMAGE:')) {
+                    const imageMatch = content.match(/\[IMAGE:([^\]]+)\]/);
+                    if (imageMatch) {
+                        const prompt = imageMatch[1];
+                        const imageUrl = `https://picsum.photos/seed/${encodeURIComponent(prompt)}/600/400.jpg`;
+                        
+                        const imageHtml = `
+                            <div class="image-container">
+                                <img src="${imageUrl}" alt="${prompt}" class="generated-image">
+                                <div class="image-prompt">תמונה שנוצרה: "${prompt}"</div>
+                            </div>
+                        `;
+                        
+                        content = content.replace(imageMatch[0], imageHtml);
+                    }
+                }
+
+                // Process file analysis
+                if (content.includes('[FILE_ANALYSIS:')) {
+                    const fileMatch = content.match(/\[FILE_ANALYSIS:([^\]]+)\]/);
+                    if (fileMatch) {
+                        const fileName = fileMatch[1];
+                        
+                        const fileHtml = `
+                            <div class="file-info">
+                                <div class="file-icon">
+                                    <i class="bi bi-file-earmark-text"></i>
+                                </div>
+                                <div class="file-details">
+                                    <div class="file-name">${fileName}</div>
+                                    <div class="file-size">ניתוח הושלם</div>
+                                </div>
+                            </div>
+                        `;
+                        
+                        content = content.replace(fileMatch[0], fileHtml);
+                    }
+                }
+
+                return content;
+            }
+
+            function escapeHtml(text) {
+                const map = {
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    '"': '&quot;',
+                    "'": '&#039;'
+                };
+                return text.replace(/[&<>"']/g, m => map[m]);
+            }
+
+            function generateAdvancedAIResponse(userMessage) {
+                // Check for special commands
+                if (userMessage.toLowerCase().includes('צור תמונה') || userMessage.toLowerCase().includes('צייר')) {
+                    const prompt = userMessage.replace(/(צור תמונה|צייר)/gi, '').trim();
+                    return `[IMAGE:${prompt || "נוף יפהפה"}]\n\nיצרתי תמונה בהתאם לבקשתך. התמונה מציגה את המושג שתיארת, עם פרטים וצבעים עשירים. האם תרצה שאשנה משהו בתמונה או שאצור תמונה נוספת?`;
+                }
+
+                if (userMessage.toLowerCase().includes('נתח קוד') || userMessage.toLowerCase().includes('הסבר קוד')) {
+                    return "אני מזהה שביקשת ניתוח קוד. כדי שאוכל לנתח את הקוד שלך, אנא הדבק אותו בין סימני הקוד (```) או השתמש בכפתור הקוד בשורת הקלט. אני אוכל לזהות באגים, להציע שיפורים, ולהסביר את הלוגיקה מאחורי הקוד.";
+                }
+
+                if (userMessage.toLowerCase().includes('זיכרון') || userMessage.toLowerCase().includes('מה אתה זוכר')) {
+                    return showMemoryInfo();
+                }
+
+                // Check for knowledge-based responses
+                const lowerMessage = userMessage.toLowerCase();
+                
+                // Physics
+                if (lowerMessage.includes('פיזיקה') || lowerMessage.includes('יחסות') || lowerMessage.includes('קוונטים')) {
+                    const physicsFacts = knowledgeBase.science.physics;
+                    return physicsFacts[Math.floor(Math.random() * physicsFacts.length)] + "\n\nזהו תחום מרתק בפיזיקה! האם יש עוד משהו ספציפי שתרצה לדעת על הנושא?";
+                }
+                
+                // Chemistry
+                if (lowerMessage.includes('כימיה') || lowerMessage.includes('אטום') || lowerMessage.includes('מולקולה')) {
+                    const chemistryFacts = knowledgeBase.science.chemistry;
+                    return chemistryFacts[Math.floor(Math.random() * chemistryFacts.length)] + "\n\nהכימיה היא המדע שחוקר את החומר והתכונות שלו. האם מעניין אותך היבט מסוים בתחום?";
+                }
+                
+                // Biology
+                if (lowerMessage.includes('ביולוגיה') || lowerMessage.includes('דנ"א') || lowerMessage.includes('אבולוציה')) {
+                    const biologyFacts = knowledgeBase.science.biology;
+                    return biologyFacts[Math.floor(Math.random() * biologyFacts.length)] + "\n\nהביולוגיה היא המדע של החיים, והיא חוקרת את כל ההיבטים של יצורים חיים. מה בדיוק מעניין אותך בתחום?";
+                }
+                
+                // Programming
+                if (lowerMessage.includes('תכנות') || lowerMessage.includes('קוד') || lowerMessage.includes('אלגוריתם')) {
+                    const programmingFacts = knowledgeBase.technology.programming;
+                    return programmingFacts[Math.floor(Math.random() * programmingFacts.length)] + "\n\nתכנות הוא אמנות ומדע כאחד. האם תרצה ללמוד עוד על שפת תכנות ספציפית או על קונספט מסוים?";
+                }
+                
+                // AI
+                if (lowerMessage.includes('בינה מלאכותית') || lowerMessage.includes('למידת מכונה') || lowerMessage.includes('נוירון')) {
+                    const aiFacts = knowledgeBase.technology.ai;
+                    return aiFacts[Math.floor(Math.random() * aiFacts.length)] + "\n\nבינה מלאכותית היא תחום מתפתח במהירות שמשנה את הדרך שבה אנו חושבים על טכנולוגיה. האם יש היבט מסוים שמעניין אותך?";
+                }
+                
+                // History
+                if (lowerMessage.includes('היסטוריה') || lowerMessage.includes('מלחמה') || lowerMessage.includes('מהפכה')) {
+                    const historyFacts = knowledgeBase.history;
+                    return historyFacts[Math.floor(Math.random() * historyFacts.length)] + "\n\nההיסטוריה מלמדת אותנו על העבר ועל הדרכים שבהן העולם הגיע למצבו הנוכחי. האם תרצה לדעת עוד על תקופה היסטורית ספציפית?";
+                }
+                
+                // Philosophy
+                if (lowerMessage.includes('פילוסופיה') || lowerMessage.includes('משמעות') || lowerMessage.includes('אמת')) {
+                    const philosophyFacts = knowledgeBase.philosophy;
+                    return philosophyFacts[Math.floor(Math.random() * philosophyFacts.length)] + "\n\nהפילוסופיה עוסקת בשאלות הגדולות של החיים והקיום. האם יש שאלה פילוסופית ספציפית שמעניינת אותך?";
+                }
+
+                // Generate contextual response based on keywords
+                if (lowerMessage.includes('שלום') || lowerMessage.includes('היי')) {
+                    return "שלום! אני SkorChat AI, העוזר האינטליגנטי שלך. אני יכול לעזור לך במגוון רחב של נושאים, ממדע וטכנולוגיה ועד אמנות ופילוסופיה. במה אוכל לסייע לך היום?";
+                } else if (lowerMessage.includes('תודה')) {
+                    return "בשמחה! אני כאן כדי לעזור. אם יש לך עוד שאלות או אם תרצה לחקור נושאים נוספים, אל תהסס לשאול.";
+                } else if (lowerMessage.includes('מה שמך')) {
+                    return "אני קוראים לי SkorChat AI, ואני מודל שפה מתקדם שתוכנן עם יכולות חשיבה מתקדמות, זיכרון ארוך טווח, ויכולת להבין ולייצר תוכן במגוון רחב של תחומים. אני מתפתח ולומד כל הזמן.";
+                } else if (lowerMessage.includes('מזג אוויר')) {
+                    return "אני לא יכול לספק מידע על מזג האוויר בזמן אמת, אבל אני יכול להסביר לך על תופעות מטאורולוגיות, איך נוצרות צורות מזג אוויר שונות, ואיך השינויים האקלימיים משפיעים על מזג האוויר. מה בדיוק מעניין אותך בנושא?";
+                } else {
+                    // Generate a more intelligent contextual response
+                    return generateContextualResponse(userMessage);
+                }
+            }
+
+            function generateContextualResponse(userMessage) {
+                // Extract keywords from the user's message
+                const words = userMessage.split(' ').filter(word => word.length > 3);
+                const randomWord = words[Math.floor(Math.random() * words.length)] || 'הנושא';
+                
+                const contextualResponses = [
+                    `זו שאלה מעניינת לגבי "${randomWord}". כדי לתת לך תשובה מקיפה, אני רוצה להבין את ההקשר שלך. האם אתה מחפש מידע כללי, דוגמאות ספציפיות, או אולי יישום מעשי?`,
+                    `בהקשר של "${randomWord}", יש כמה גישות שונות שאפשר לקחת. הגישה המסורתית רואה את הנושא מזווית אחת, בעוד שהגישה המודרנית משלבת מספר תחומים. מה מעניין אותך במיוחד?`,
+                    `הנושא "${randomWord}" הוא רחב ומורכב. אם אתה מתחיל, אני ממליץ להתחיל עם היסודות ולהתקדם בהדרגה לנושאים מתקדמים יותר. האם תרצה שאתחיל מהבסיס?`,
+                    `כשאנחנו דנים ב"${randomWord}", חשוב לזכור שיש היבטים תיאורטיים ומעשיים. האם אתה מעוניין יותר בהיבט התיאורטי או ביישום מעשי?`,
+                    `"${randomWord}" הוא תחום שהשתנה מאוד בשנים האחרונות. ההתפתחויות האחרונות פתחו דלתות חדשות למחקר ויישום. האם תרצה לשמוע על החידושים האחרונים?`
+                ];
+                
+                return contextualResponses[Math.floor(Math.random() * contextualResponses.length)];
+            }
+
+            function analyzeCode(code) {
+                // Simulate code analysis
+                const codeAnalysis = [
+                    "זיהיתי מספר נקודות לשיפור בקוד שלך:\n\n1. יעילות: ניתן לייעל את הלולאה בשורות 5-8 על ידי שימוש במבנה נתונים יעיל יותר.\n2. קריאות: הוספת הערות תשפר את הקריאות של הקוד.\n3. בטיחות: מומלץ להוסיף בדיקת שגיאות בנקודות קריטיות.\n\nהאם תרצה שאראה לך דוגמה לקוד משופר?",
+                    "הקוד שלך נראה טוב מבחינת תחביר, אבל יש כמה שיקולים לוגיים שכדאי לבחון:\n\n1. מורכבות זמן: האלגוריתם הנוכחי פועל בסיבוכיות O(n²), ניתן לשפר אותו ל-O(n log n).\n2. שימוש בזיכרון: ישנן דרכים להפחית את צריכת הזיכרון.\n3. תחליפיות: ניתן להפוך את הקוד למודולרי יותר על ידי הפרדת האחריות.\n\nהאם תרצה לראות דוגמה ליישום משופר?",
+                    "ניתחתי את הקוד שלך ומצאתי מספר נקודות חזקות וכמה הזדמנויות לשיפור:\n\n**חוזקות:**\n- המבנה הכללי ברור והגיוני\n- השימוש במשתנים מתאר היטב את תפקידם\n\n**הצעות לשיפור:**\n- שקול להשתמש בפונקציות מסדר גבוה יותר כדי לצמצם קוד חוזר\n- הוסף טיפול במקרי קצה\n- שקול ליישם תבנית עיצוב מתאימה לבעיה שלך\n\nהאם תרצה שארחיב על אחד הנושאים האלה?"
+                ];
+                
+                return codeAnalysis[Math.floor(Math.random() * codeAnalysis.length)];
+            }
+
+            function showTypingIndicator() {
+                isTyping = true;
+                typingIndicator.classList.add('active');
+                messagesContainer.appendChild(typingIndicator);
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            }
+
+            function hideTypingIndicator() {
+                isTyping = false;
+                typingIndicator.classList.remove('active');
+            }
+
+            function createNewChat() {
+                currentChatId = generateId();
+                loadChat(currentChatId);
+                
+                // Close sidebar on mobile
+                if (window.innerWidth <= 768) {
+                    sidebar.classList.remove('active');
+                }
+            }
+
+            function loadChat(chatId) {
+                currentChatId = chatId;
+                
+                // Clear messages
+                messagesContainer.innerHTML = '';
+                
+                // Load chat or create new one
+                if (chats[chatId] && chats[chatId].messages) {
+                    chatTitle.textContent = chats[chatId].title;
+                    
+                    // Add welcome message if chat is empty
+                    if (chats[chatId].messages.length === 0) {
+                        addWelcomeMessage();
+                    } else {
+                        // Load existing messages
+                        chats[chatId].messages.forEach(msg => {
+                            addMessageToDOM(msg.content, msg.sender, msg.timestamp, msg.id);
+                        });
+                    }
+                } else {
+                    chatTitle.textContent = 'שיחה חדשה';
+                    addWelcomeMessage();
+                }
+                
+                // Update active chat in history
+                updateChatHistory();
+            }
+
+            function addWelcomeMessage() {
+                const welcomeMessage = document.createElement('div');
+                welcomeMessage.className = 'message assistant';
+                welcomeMessage.innerHTML = `
+                    <div class="message-avatar">
+                        <i class="bi bi-robot"></i>
+                    </div>
+                    <div>
+                        <div class="message-content">
+                            <div>ברוך הבא ל-SkorChat AI! אני עוזר הAI המתקדם שלך עם יכולות חשיבה מתקדמות, זיכרון ארוך טווח, ויכולת יצירת תמונות.</div>
+                            <div class="capability-chips">
+                                <div class="capability-chip">ניתוח מתקדם</div>
+                                <div class="capability-chip">יצירת תמונות</div>
+                                <div class="capability-chip">זיכרון ארוך טווח</div>
+                                <div class="capability-chip">עיבוד קבצים</div>
+                                <div class="capability-chip">כתיבת קוד</div>
+                            </div>
+                            <div class="feature-highlight">
+                                <div class="feature-title">יכולות מתקדמות</div>
+                                <div class="feature-description">אני יכול לזכור את השיחות הקודמות שלנו, לנתח קבצים, ליצור תמונות מתיאורים, לכתוב קוד, ועוד רבות אחרות. איך אני יכול לעזור לך היום?</div>
+                            </div>
+                            <div class="suggestion-chips">
+                                <div class="suggestion-chip" data-suggestion="צור לי תמונה של יער קסום בלילה">צור תמונה</div>
+                                <div class="suggestion-chip" data-suggestion="כתוב לי קוד לאפליקציית טודו ליסט">כתוב קוד</div>
+                                <div class="suggestion-chip" data-suggestion="הסבר לי על תורת היחסות הכללית">הסבר מושג</div>
+                                <div class="suggestion-chip" data-suggestion="נתח את המסמך שאני אעלה">נתח קובץ</div>
+                            </div>
+                        </div>
+                        <div class="message-time">עכשיו</div>
+                    </div>
+                `;
+                messagesContainer.appendChild(welcomeMessage);
+            }
+
+            function addMessageToDOM(content, sender, timestamp, id) {
+                const messageElement = document.createElement('div');
+                messageElement.className = `message ${sender}`;
+                messageElement.id = id;
+
+                const avatarElement = document.createElement('div');
+                avatarElement.className = 'message-avatar';
+                avatarElement.innerHTML = sender === 'user' ? '<i class="bi bi-person"></i>' : '<i class="bi bi-robot"></i>';
+
+                const contentContainer = document.createElement('div');
+
+                const contentElement = document.createElement('div');
+                contentElement.className = 'message-content';
+                
+                // Process content for special formatting
+                if (sender === 'assistant') {
+                    contentElement.innerHTML = processAssistantMessage(content);
+                } else {
+                    contentElement.textContent = content;
+                }
+
+                const timeElement = document.createElement('div');
+                timeElement.className = 'message-time';
+                timeElement.textContent = timestamp;
+
+                // Add memory indicator for assistant messages
+                if (sender === 'assistant' && memoryEnabled) {
+                    const memoryIndicator = document.createElement('div');
+                    memoryIndicator.className = 'memory-indicator';
+                    memoryIndicator.innerHTML = '<div class="memory-dot"></div> זיכרון פעיל';
+                    contentContainer.appendChild(memoryIndicator);
+                }
+
+                contentContainer.appendChild(contentElement);
+                contentContainer.appendChild(timeElement);
+
+                messageElement.appendChild(avatarElement);
+                messageElement.appendChild(contentContainer);
+
+                messagesContainer.appendChild(messageElement);
+            }
+
+            function loadChats() {
+                updateChatHistory();
+            }
+
+            function saveChats() {
+                localStorage.setItem('skorChats', JSON.stringify(chats));
+            }
+
+            function updateChatHistory() {
+                chatHistory.innerHTML = '';
+                
+                // Sort chats by last message time
+                const sortedChats = Object.values(chats).sort((a, b) => {
+                    const aTime = a.messages && a.messages.length > 0 
+                        ? new Date(a.messages[a.messages.length - 1].timestamp).getTime() 
+                        : new Date(a.createdAt).getTime();
+                    const bTime = b.messages && b.messages.length > 0 
+                        ? new Date(b.messages[b.messages.length - 1].timestamp).getTime() 
+                        : new Date(b.createdAt).getTime();
+                    return bTime - aTime;
+                });
+                
+                sortedChats.forEach(chat => {
+                    const chatItem = document.createElement('div');
+                    chatItem.className = `chat-history-item ${chat.id === currentChatId ? 'active' : ''}`;
+                    chatItem.textContent = chat.title;
+                    chatItem.addEventListener('click', () => loadChat(chat.id));
+                    chatHistory.appendChild(chatItem);
+                });
+            }
+
+            function toggleSidebar() {
+                sidebar.classList.toggle('active');
+            }
+
+            function openSettings() {
+                settingsModal.classList.add('active');
+            }
+
+            function closeSettingsModal() {
+                settingsModal.classList.remove('active');
+            }
+
+            function toggleTheme() {
+                const currentTheme = document.documentElement.getAttribute('data-theme');
+                const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+                
+                document.documentElement.setAttribute('data-theme', newTheme);
+                themeToggle.classList.toggle('active', newTheme === 'dark');
+                
+                localStorage.setItem('skorChatTheme', newTheme);
+            }
+
+            function loadTheme() {
+                const savedTheme = localStorage.getItem('skorChatTheme') || 'light';
+                document.documentElement.setAttribute('data-theme', savedTheme);
+                themeToggle.classList.toggle('active', savedTheme === 'dark');
+            }
+
+            function toggleMemory() {
+                memoryEnabled = !memoryEnabled;
+                memoryToggle.classList.toggle('active', memoryEnabled);
+                localStorage.setItem('skorChatMemory', memoryEnabled);
+            }
+
+            function loadMemorySettings() {
+                const savedMemory = localStorage.getItem('skorChatMemory');
+                if (savedMemory !== null) {
+                    memoryEnabled = savedMemory === 'true';
+                    memoryToggle.classList.toggle('active', memoryEnabled);
+                }
+            }
+
+            function saveModel() {
+                localStorage.setItem('skorChatModel', modelSelect.value);
+            }
+
+            function loadModel() {
+                const savedModel = localStorage.getItem('skorChatModel') || 'skorchat-ultra';
+                modelSelect.value = savedModel;
+            }
+
+            function exportCurrentChat() {
+                if (!chats[currentChatId]) return;
+                
+                const chat = chats[currentChatId];
+                const chatData = {
+                    title: chat.title,
+                    createdAt: chat.createdAt,
+                    messages: chat.messages
+                };
+                
+                const dataStr = JSON.stringify(chatData, null, 2);
+                const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+                
+                const exportFileDefaultName = `skorchat_${chat.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_${new Date().toISOString().slice(0,10)}.json`;
+                
+                const linkElement = document.createElement('a');
+                linkElement.setAttribute('href', dataUri);
+                linkElement.setAttribute('download', exportFileDefaultName);
+                linkElement.click();
+            }
+
+            function exportAllChats() {
+                const dataStr = JSON.stringify(chats, null, 2);
+                const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+                
+                const exportFileDefaultName = `skorchat_all_chats_${new Date().toISOString().slice(0,10)}.json`;
+                
+                const linkElement = document.createElement('a');
+                linkElement.setAttribute('href', dataUri);
+                linkElement.setAttribute('download', exportFileDefaultName);
+                linkElement.click();
+            }
+
+            function clearAllChats() {
+                if (confirm('האם אתה בטוח שברצונך למחוק את כל השיחות? פעולה זו אינה ניתנת לביטול.')) {
+                    chats = {};
+                    saveChats();
+                    createNewChat();
+                }
+            }
+
+            function showFileUpload() {
+                const fileInput = document.createElement('input');
+                fileInput.type = 'file';
+                fileInput.accept = '.txt,.pdf,.doc,.docx,.csv,.json';
+                
+                fileInput.onchange = function(e) {
+                    const file = e.target.files[0];
+                    if (file) {
+                        attachedFile = file;
+                        
+                        // Add file info message
+                        const fileInfo = `
+                            <div class="file-info">
+                                <div class="file-icon">
+                                    <i class="bi bi-file-earmark-text"></i>
+                                </div>
+                                <div class="file-details">
+                                    <div class="file-name">${file.name}</div>
+                                    <div class="file-size">${formatFileSize(file.size)}</div>
+                                </div>
+                                <button class="remove-file" onclick="removeAttachedFile()">
+                                    <i class="bi bi-x-circle"></i>
+                                </button>
+                            </div>
+                        `;
+                        
+                        const fileMessage = document.createElement('div');
+                        fileMessage.className = 'message user';
+                        fileMessage.innerHTML = `
+                            <div class="message-avatar">
+                                <i class="bi bi-person"></i>
+                            </div>
+                            <div>
+                                <div class="message-content">${fileInfo}</div>
+                                <div class="message-time">${new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}</div>
+                            </div>
+                        `;
+                        
+                        messagesContainer.appendChild(fileMessage);
+                        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                        
+                        // Simulate file analysis
+                        showTypingIndicator();
+                        setTimeout(() => {
+                            hideTypingIndicator();
+                            const analysis = `[FILE_ANALYSIS:${file.name}]\n\nניתחתי את הקובץ "${file.name}" שהעלית. הנה הממצאים העיקריים:\n\n1. **סוג הקובץ:** ${file.type || 'לא ידוע'}\n2. **גודל:** ${formatFileSize(file.size)}\n3. **תוכן עיקרי:** הקובץ מכיל מידע על ${generateFileContentDescription(file.name)}\n4. **נקודות עיקריות:** ${generateKeyPoints(file.name)}\n\nהאם תרצה שאעמיק בניתוח של חלק מסוים מהקובץ?`;
+                            addMessage(analysis, 'assistant');
+                        }, 2000 + Math.random() * 2000);
+                    }
+                };
+                
+                fileInput.click();
+            }
+
+            function formatFileSize(bytes) {
+                if (bytes === 0) return '0 Bytes';
+                const k = 1024;
+                const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+                const i = Math.floor(Math.log(bytes) / Math.log(k));
+                return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+            }
+
+            function generateFileContentDescription(fileName) {
+                const descriptions = [
+                    "מבנה ארגוני ותהליכים פנימיים",
+                    "נתונים כמותיים ומגמות היסטוריות",
+                    "מידע טכני ומפרטי מוצר",
+                    "תוכן חינוכי ומידע רקע",
+                    "ניתוח שוק ומחקר תחרותי"
+                ];
+                
+                return descriptions[Math.floor(Math.random() * descriptions.length)];
+            }
+
+            function generateKeyPoints(fileName) {
+                const keyPoints = [
+                    "זיהיתי 3 נושאים מרכזיים בקובץ: הקשר היסטורי, ממצאים עיקריים, והמלצות לעתיד.",
+                    "המידע מצביע על מגמה ברורה של גידול בתחום, עם דגש על חדשנות וטכנולוגיה.",
+                    "הקובץ מכיל נתונים סטטיסטיים חשובים שיכולים לסייע בקבלת החלטות אסטרטגיות.",
+                    "זיהיתי הזדמנויות לשיפור בשלושה תחומים עיקריים: יעילות תפעולית, חוויית לקוח, ופיתוח מוצר."
+                ];
+                
+                return keyPoints[Math.floor(Math.random() * keyPoints.length)];
+            }
+
+            function removeAttachedFile() {
+                attachedFile = null;
+                // This would be more complex in a real implementation
+                // For now, we'll just set the file to null
+            }
+
+            function showImagePrompt() {
+                const prompt = prompt("תאר את התמונה שברצונך ליצור:");
+                if (prompt) {
+                    messageInput.value = `צור תמונה: ${prompt}`;
+                    sendMessage();
+                }
+            }
+
+            function toggleCodeMode() {
+                codeMode = !codeMode;
+                codeBtn.style.color = codeMode ? 'var(--primary-color)' : 'var(--light-text)';
+                
+                if (codeMode) {
+                    messageInput.placeholder = "הכנס קוד...";
+                } else {
+                    messageInput.placeholder = "כתוב הודעה...";
+                }
+            }
+
+            function showMemoryInfo() {
+                const totalChats = Object.keys(chats).length;
+                const totalMessages = Object.values(chats).reduce((total, chat) => total + (chat.messages ? chat.messages.length : 0), 0);
+                
+                const memoryInfo = `
+                    <div class="feature-highlight">
+                        <div class="feature-title">מידע זיכרון</div>
+                        <div class="feature-description">
+                            <p>אני SkorChat AI עם יכולות זיכרון מתקדמות:</p>
+                            <ul>
+                                <li>מספר שיחות שמורות: ${totalChats}</li>
+                                <li>סך הכל הודעות: ${totalMessages}</li>
+                                <li>זיכרון ארוך טווח: ${memoryEnabled ? 'פעיל' : 'כבוי'}</li>
+                            </ul>
+                            <p>אני זוכר את כל השיחות שלנו ומשתמש במידע זה כדי לספק תשובות רלוונטיות ומותאמות אישית. הזיכרון שלי מאפשר לי ללמוד מההעדפות שלך ולהבין הקשרים בין שיחות שונות.</p>
+                        </div>
+                    </div>
+                `;
+                
+                return memoryInfo;
+            }
+
+            // Make copyCode function globally accessible
+            window.copyCode = function(button) {
+                const codeBlock = button.closest('.code-block');
+                const code = codeBlock.querySelector('pre').textContent;
+                
+                navigator.clipboard.writeText(code).then(() => {
+                    button.innerHTML = '<i class="bi bi-check"></i> הועתק!';
+                    setTimeout(() => {
+                        button.innerHTML = '<i class="bi bi-clipboard"></i> העתק';
+                    }, 2000);
+                });
+            };
+
+            // Close settings modal when clicking outside
+            settingsModal.addEventListener('click', function(e) {
+                if (e.target === settingsModal) {
+                    closeSettingsModal();
+                }
+            });
+        });
+    </script>
 </body>
-</html>
-  `);
-});
-
-// API endpoint for chat
-app.post('/api/chat', async (req, res) => {
-  const { message } = req.body;
-  if (!message) return res.status(400).json({ error: 'Message is required' });
-
-  try {
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-4o-mini', // You can change to 'gpt-4', 'gpt-3.5-turbo', etc.
-      messages: [{ role: 'user', content: message }],
-    });
-
-    const reply = completion.choices[0].message.content;
-    res.json({ reply });
-  } catch (error) {
-    console.error('OpenAI API error:', error);
-    res.status(500).json({ error: 'Failed to get AI response' });
-  }
-});
-
-// Run server
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`SkorChat server running on port ${PORT}`);
-
-});
+  </html>
