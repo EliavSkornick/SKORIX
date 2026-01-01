@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SkorOS | Missions Protocol</title>
+    <title>SkorOS | Eliav Skornick - AI Architect</title>
     
+    <!-- Libraries -->
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -20,119 +21,127 @@
             text-transform: uppercase;
         }
 
+        /* רקע מצלמה - פרוס על הכל עם פילטר */
         #video-background {
             position: fixed; inset: 0; z-index: 0;
             transform: scaleX(-1);
-            opacity: 0.2;
-            filter: grayscale(100%) brightness(0.4);
+            opacity: 0.25;
+            filter: grayscale(100%) brightness(0.5) contrast(1.2);
         }
         video { width: 100%; height: 100%; object-fit: cover; }
 
-        #canvas-container { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
+        #canvas-container {
+            position: absolute; inset: 0; z-index: 2;
+            pointer-events: none; /* מאפשר לגעת באלמנטים מתחת אם יש כאלה */
+        }
 
-        /* HUD Layers */
+        /* שכבת HUD עליונה */
         .hud-interface {
             position: absolute; inset: 0; z-index: 10;
-            pointer-events: none; padding: 25px;
-            display: flex; flex-direction: column; justify-content: space-between;
+            pointer-events: none; padding: 3vw;
+            display: flex; flex-direction: column;
+            justify-content: space-between;
         }
 
-        .hud-header { display: flex; justify-content: space-between; align-items: flex-start; }
+        .hud-header {
+            display: flex; justify-content: space-between; align-items: flex-start;
+        }
 
         .user-profile {
-            border-right: 4px solid #00f2ff; padding-right: 20px;
+            border-right: 4px solid #00f2ff;
+            padding-right: 20px;
             background: linear-gradient(-90deg, rgba(0,242,255,0.1), transparent);
         }
-        .user-profile h1 { margin: 0; font-size: 2rem; font-weight: 900; letter-spacing: 5px; }
 
-        /* Mission Panel */
-        .mission-panel {
-            position: absolute; top: 120px; left: 25px; width: 250px;
-            background: rgba(0,242,255,0.05); border: 1px solid rgba(0,242,255,0.2);
-            backdrop-filter: blur(10px); padding: 15px;
-        }
-        .mission-title { color: #ff9d00; font-size: 14px; font-weight: bold; margin-bottom: 5px; }
-        .mission-desc { font-size: 10px; opacity: 0.8; margin-bottom: 10px; }
-        .progress-container { width: 100%; height: 4px; background: rgba(255,255,255,0.1); }
-        #progress-fill { width: 0%; height: 100%; background: #00f2ff; box-shadow: 0 0 10px #00f2ff; transition: 0.3s; }
-
-        /* Level Display */
-        #level-indicator {
-            position: absolute; top: 30px; left: 50%; transform: translateX(-50%);
-            font-size: 12px; letter-spacing: 10px; opacity: 0.5;
+        .user-profile h1 {
+            margin: 0; font-size: clamp(1.5rem, 4vw, 2.5rem);
+            font-weight: 900; letter-spacing: 10px;
+            text-shadow: 0 0 20px rgba(0,242,255,0.7);
         }
 
-        /* Screen Flash for Alerts */
-        #alert-flash {
-            position: fixed; inset: 0; pointer-events: none; z-index: 100; opacity: 0;
-            background: radial-gradient(circle, transparent, rgba(255,0,0,0.3));
+        .system-specs {
+            text-align: left; font-size: 10px; opacity: 0.7; letter-spacing: 2px;
         }
 
+        .hud-footer {
+            display: flex; justify-content: space-between; align-items: flex-end;
+        }
+
+        .status-box {
+            font-size: 12px; border: 1px solid rgba(0,242,255,0.3);
+            padding: 10px 20px; background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(10px);
+        }
+
+        /* מסך פתיחה */
         #loading-overlay {
             position: fixed; inset: 0; background: #000; z-index: 1000;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
+            transition: opacity 1s ease;
         }
+
+        .loader-ring {
+            width: 100px; height: 100px; border: 2px solid rgba(0,242,255,0.1);
+            border-top: 2px solid #00f2ff; border-radius: 50%;
+            animation: spin 1s linear infinite; margin-bottom: 20px;
+        }
+
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+
         .btn-start {
             background: transparent; border: 1px solid #00f2ff;
             color: #00f2ff; padding: 15px 50px; cursor: pointer;
-            letter-spacing: 5px; font-weight: bold;
+            font-family: 'Inter', sans-serif; letter-spacing: 5px;
+            transition: 0.4s; font-weight: bold;
         }
+        .btn-start:hover { background: #00f2ff; color: #000; box-shadow: 0 0 30px #00f2ff; }
 
-        /* Task Notifications */
-        #notify {
-            position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%);
-            font-size: 2rem; font-weight: 900; opacity: 0; color: #fff; text-shadow: 0 0 20px #00f2ff;
+        /* אפקטי סריקה */
+        .scanline {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), 
+                        linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            background-size: 100% 2px, 3px 100%;
+            z-index: 5; pointer-events: none; opacity: 0.3;
         }
     </style>
 </head>
 <body>
 
     <div id="loading-overlay">
-        <div style="letter-spacing: 10px; margin-bottom: 20px; opacity: 0.5;">SKOR-OS MK-IV</div>
-        <h2 style="letter-spacing: 5px; margin-bottom: 30px;">MISSION PROTOCOL v1.0</h2>
-        <button class="btn-start" onclick="startMissions()">ENGAGE SYSTEM</button>
+        <div class="loader-ring"></div>
+        <div style="letter-spacing: 15px; margin-bottom: 30px;">SKOR-OS</div>
+        <button class="btn-start" onclick="initializeSite()">AUTHENTICATE</button>
     </div>
-
-    <div id="alert-flash"></div>
-    <div id="notify">MISSION COMPLETE</div>
 
     <div id="video-background">
         <video id="webcam" autoplay playsinline></video>
     </div>
 
+    <div class="scanline"></div>
     <div id="canvas-container"></div>
 
     <div class="hud-interface">
-        <div id="level-indicator">PROTOCOL: STAGE 01</div>
-        
         <header class="hud-header">
             <div class="user-profile">
-                <h1>ELIAV SKORNICK</h1>
-                <div style="color: #ff9d00; font-size: 11px; margin-top: 5px;">RANK: TECH MASTER // SCORE: <span id="score-val">0</span></div>
+                <h1 id="user-name">ELIAV SKORNICK</h1>
+                <div style="color: #ff9d00; font-size: 12px; margin-top: 5px;">LEVEL 10 ARCHITECT // SKORCHAT CORE ACTIVE</div>
             </div>
-            <div style="text-align: left; font-size: 10px; opacity: 0.7;">
-                MISSION_ID: SK-404<br>
-                SEC_ENCRYPT: AES-256<br>
-                STATUS: <span id="sys-status">STANDBY</span>
+            <div class="system-specs">
+                OS_VER: 3.0.4<br>
+                AUTH_KEY: SK-9921<br>
+                SEC_LEVEL: ALPHA
             </div>
         </header>
 
-        <div class="mission-panel">
-            <div id="mission-name" class="mission-title">CORE CALIBRATION</div>
-            <div id="mission-desc" class="mission-desc">GRAB THE DATA FRAGMENTS AND DRAG THEM TO THE CENTER CORE.</div>
-            <div class="progress-container">
-                <div id="progress-fill"></div>
+        <footer class="hud-footer">
+            <div class="status-box">
+                <span style="color: rgba(255,255,255,0.5);">SIGNAL:</span> <span id="signal-status">SEARCHING...</span>
             </div>
-        </div>
-
-        <footer style="display: flex; justify-content: space-between; align-items: flex-end;">
-            <div style="font-size: 12px; background: rgba(0,0,0,0.4); padding: 10px; border-left: 2px solid #00f2ff;">
-                NEURAL_LINK: <span id="sync-pct">0%</span><br>
-                GESTURE: <span id="gesture-type">NONE</span>
-            </div>
-            <div style="text-align: right; font-size: 10px; opacity: 0.5;">
-                STARK_IND_LOGS // 2026<br>
-                AI ARCHITECTURE BY SKORNICK
+            <div style="text-align: right; font-size: 10px; line-height: 1.8;">
+                LOCATION: SECTOR 42 - TEL AVIV<br>
+                NEURAL SYNC: <span id="sync-val">0.0%</span><br>
+                PROTOCOLS: JARVIS_V2
             </div>
         </footer>
     </div>
@@ -141,202 +150,139 @@
         let scene, camera, renderer, clock;
         let handCursor, handTarget = new THREE.Vector3();
         let core, fragments = [];
-        let isPinching = false, grabbed = null;
-        
-        // Game Logic State
-        let currentStage = 1;
-        let score = 0;
-        let progress = 0;
-        let missionComplete = false;
-
-        const stages = [
-            { name: "CORE CALIBRATION", desc: "תפוס את חלקיקי המידע וגרור אותם לליבה הכתומה.", target: 100 },
-            { name: "DATA PURGE", desc: "השמד את האובייקטים האדומים המופיעים במרחב (Pinch עליהם).", target: 100 },
-            { name: "CORE STABILIZE", desc: "הליבה רועדת! תפוס אותה והחזק אותה יציב במרכז.", target: 100 }
-        ];
+        let isPinching = false;
+        let grabbed = null;
 
         function init3D() {
             scene = new THREE.Scene();
-            camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 1000);
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
             camera.position.z = 100;
 
             renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
             document.getElementById('canvas-container').appendChild(renderer.domElement);
 
-            // Hand Cursor
-            const ringGeo = new THREE.TorusGeometry(5, 0.3, 16, 100);
-            handCursor = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: 0x00f2ff }));
+            // 1. כוונת איירון מן (Hand Cursor)
+            const ringGeo = new THREE.TorusGeometry(4, 0.2, 16, 100);
+            const ringMat = new THREE.MeshBasicMaterial({ color: 0x00f2ff, transparent: true, opacity: 0.8 });
+            handCursor = new THREE.Mesh(ringGeo, ringMat);
             scene.add(handCursor);
 
-            // Central Core
-            const coreGeo = new THREE.IcosahedronGeometry(12, 0);
-            core = new THREE.LineSegments(new THREE.WireframeGeometry(coreGeo), new THREE.LineBasicMaterial({ color: 0xff9d00 }));
+            // 2. ליבת SkorChat (המרכז)
+            const coreGeo = new THREE.DodecahedronGeometry(12, 0);
+            const coreWire = new THREE.WireframeGeometry(coreGeo);
+            core = new THREE.LineSegments(coreWire, new THREE.LineBasicMaterial({ color: 0xff9d00 }));
+            core.name = "SKOR_CORE";
             scene.add(core);
+            fragments.push(core);
 
-            createFragments();
+            // 3. חלקיקי נתונים מרחפים
+            const info = ["SKORCHAT", "AI", "FUTURE", "ELIAV", "STARK"];
+            for(let i=0; i<5; i++) {
+                const geo = new THREE.OctahedronGeometry(4, 0);
+                const wire = new THREE.WireframeGeometry(geo);
+                const mesh = new THREE.LineSegments(wire, new THREE.LineBasicMaterial({ color: 0x00f2ff, transparent: true, opacity: 0.5 }));
+                const angle = (i / 5) * Math.PI * 2;
+                mesh.position.set(Math.cos(angle) * 45, Math.sin(angle) * 45, (Math.random()-0.5)*20);
+                scene.add(mesh);
+                fragments.push(mesh);
+            }
 
             clock = new THREE.Clock();
             animate();
         }
 
-        function createFragments() {
-            // Remove old ones
-            fragments.forEach(f => scene.remove(f));
-            fragments = [];
-
-            for(let i=0; i<6; i++) {
-                const geo = new THREE.OctahedronGeometry(4, 0);
-                const color = currentStage === 2 ? 0xff0000 : 0x00f2ff;
-                const mesh = new THREE.LineSegments(new THREE.WireframeGeometry(geo), new THREE.LineBasicMaterial({ color: color }));
-                
-                const angle = (i / 6) * Math.PI * 2;
-                mesh.position.set(Math.cos(angle)*60, Math.sin(angle)*60, (Math.random()-0.5)*30);
-                scene.add(mesh);
-                fragments.push(mesh);
-            }
-        }
-
-        async function startMissions() {
+        async function initializeSite() {
             gsap.to("#loading-overlay", { opacity: 0, duration: 1, onComplete: () => document.getElementById('loading-overlay').remove() });
+            
             init3D();
+
+            const video = document.getElementById('webcam');
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            video.srcObject = stream;
 
             const hands = new Hands({ locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}` });
             hands.setOptions({ maxNumHands: 1, modelComplexity: 1, minDetectionConfidence: 0.8, minTrackingConfidence: 0.8 });
             
-            hands.onResults(onResults);
-            
-            const video = document.getElementById('webcam');
-            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-            video.srcObject = stream;
+            hands.onResults(results => {
+                if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+                    document.getElementById('signal-status').innerText = "CONNECTED";
+                    document.getElementById('signal-status').style.color = "#00ff00";
+                    
+                    const lm = results.multiHandLandmarks[0];
+                    const index = lm[8];
+                    const thumb = lm[4];
+
+                    // Mapping
+                    handTarget.x = (0.5 - index.x) * 180;
+                    handTarget.y = (0.5 - index.y) * 120;
+
+                    // Pinch (Grab) detection
+                    const d = Math.sqrt(Math.pow(index.x-thumb.x, 2) + Math.pow(index.y-thumb.y, 2));
+                    if(d < 0.05) {
+                        if(!isPinching) grabObj();
+                        isPinching = true;
+                    } else {
+                        isPinching = false;
+                        grabbed = null;
+                    }
+
+                    document.getElementById('sync-val').innerText = (90 + Math.random()*9).toFixed(1) + "%";
+                } else {
+                    document.getElementById('signal-status').innerText = "LOST SIGNAL";
+                    document.getElementById('signal-status').style.color = "#ff0000";
+                }
+            });
+
             const cam = new Camera(video, { onFrame: async () => await hands.send({image: video}), width: 1280, height: 720 });
             cam.start();
-            
-            document.getElementById('sys-status').innerText = "MISSION ACTIVE";
         }
 
-        function onResults(res) {
-            if (res.multiHandLandmarks && res.multiHandLandmarks.length > 0) {
-                const lm = res.multiHandLandmarks[0];
-                const index = lm[8];
-                const thumb = lm[4];
-
-                handTarget.x = (0.5 - index.x) * 200;
-                handTarget.y = (0.5 - index.y) * 120;
-
-                const dist = Math.sqrt(Math.pow(index.x-thumb.x, 2) + Math.pow(index.y-thumb.y, 2));
-                
-                if(dist < 0.05) {
-                    if(!isPinching) handleGrab();
-                    isPinching = true;
-                    document.getElementById('gesture-type').innerText = "PINCH";
-                } else {
-                    isPinching = false;
-                    grabbed = null;
-                    document.getElementById('gesture-type').innerText = "IDLE";
-                }
-                document.getElementById('sync-pct').innerText = (95 + Math.random()*4).toFixed(1) + "%";
-            }
-        }
-
-        function handleGrab() {
+        function grabObj() {
             let minD = 25;
             fragments.forEach(f => {
                 const d = f.position.distanceTo(handCursor.position);
                 if(d < minD) {
+                    minD = d;
                     grabbed = f;
-                    if(currentStage === 2) {
-                        // Kill red objects
-                        gsap.to(f.scale, { x: 2, y: 2, z: 2, duration: 0.2 });
-                        gsap.to(f.position, { x: 0, y: 0, z: 0, duration: 0.2, onComplete: () => {
-                            scene.remove(f);
-                            updateProgress(15);
-                        }});
-                    }
                 }
             });
-            
-            // Level 3 specific
-            if(currentStage === 3) {
-                const dCore = core.position.distanceTo(handCursor.position);
-                if(dCore < 20) grabbed = core;
-            }
-        }
-
-        function updateProgress(val) {
-            progress += val;
-            if(progress >= 100) {
-                progress = 100;
-                nextLevel();
-            }
-            document.getElementById('progress-fill').style.width = progress + "%";
-            score += val * 10;
-            document.getElementById('score-val').innerText = score;
-        }
-
-        function nextLevel() {
-            if(missionComplete) return;
-            
-            currentStage++;
-            progress = 0;
-            document.getElementById('progress-fill').style.width = "0%";
-            
-            const notify = document.getElementById('notify');
-            notify.innerText = "STAGE COMPLETE";
-            gsap.fromTo(notify, { opacity: 1, y: 0 }, { opacity: 0, y: -50, duration: 2 });
-
-            if(currentStage > 3) {
-                missionComplete = true;
-                document.getElementById('mission-name').innerText = "ALL MISSIONS CLEAR";
-                document.getElementById('mission-desc').innerText = "MASTER ARCHITECT STATUS ACHIEVED.";
-                return;
-            }
-
-            const s = stages[currentStage-1];
-            document.getElementById('mission-name').innerText = s.name;
-            document.getElementById('mission-desc').innerText = s.desc;
-            document.getElementById('level-indicator').innerText = `PROTOCOL: STAGE 0${currentStage}`;
-            
-            createFragments();
         }
 
         function animate() {
             requestAnimationFrame(animate);
             const t = clock.getElapsedTime();
 
+            // Cursor follows hand
             handCursor.position.lerp(handTarget, 0.15);
-            handCursor.rotation.z += 0.1;
+            handCursor.rotation.z += 0.05;
 
-            if(grabbed) {
-                grabbed.position.lerp(handTarget, 0.3);
-                // Check collision with core in Level 1
-                if(currentStage === 1 && grabbed !== core) {
-                    if(grabbed.position.distanceTo(core.position) < 10) {
-                        scene.remove(grabbed);
-                        grabbed = null;
-                        updateProgress(20);
+            // Physics & Motion
+            fragments.forEach((f, i) => {
+                if(f === grabbed) {
+                    f.position.lerp(handTarget, 0.2);
+                    f.rotation.x += 0.1;
+                } else {
+                    f.rotation.y += 0.01;
+                    if(f.name !== "SKOR_CORE") {
+                        f.position.y += Math.sin(t + i) * 0.03;
                     }
                 }
-            }
+            });
 
-            // Core Behavior
-            if(currentStage === 3) {
-                // Shake core
-                core.position.x = Math.sin(t * 10) * 5;
-                core.position.y = Math.cos(t * 12) * 5;
-                if(grabbed === core) {
-                    updateProgress(0.5); // Sustained hold
-                }
-            } else {
-                core.rotation.y += 0.02;
-                core.rotation.x = Math.sin(t*0.5)*0.2;
-            }
+            core.rotation.x = Math.sin(t * 0.5) * 0.2;
+            core.rotation.y += 0.02;
 
             renderer.render(scene, camera);
         }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
     </script>
 </body>
 </html>
-
-
 
