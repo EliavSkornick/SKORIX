@@ -3,16 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SkorOS | Eliav Skornick - AI Architect</title>
+    <title>SkorOS Mk-V | Eliav Skornick</title>
     
-    <!-- Libraries -->
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
 
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100;400;900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100;300;900&display=swap');
 
         body, html {
             margin: 0; padding: 0; width: 100%; height: 100%;
@@ -21,139 +20,140 @@
             text-transform: uppercase;
         }
 
-        /* רקע מצלמה - פרוס על הכל עם פילטר */
-        #video-background {
+        /* רקע מצלמה נקי */
+        #video-container {
             position: fixed; inset: 0; z-index: 0;
             transform: scaleX(-1);
-            opacity: 0.25;
-            filter: grayscale(100%) brightness(0.5) contrast(1.2);
+            opacity: 0.3;
+            filter: grayscale(100%) brightness(0.4) contrast(1.1);
         }
         video { width: 100%; height: 100%; object-fit: cover; }
 
         #canvas-container {
             position: absolute; inset: 0; z-index: 2;
-            pointer-events: none; /* מאפשר לגעת באלמנטים מתחת אם יש כאלה */
+            pointer-events: none;
         }
 
-        /* שכבת HUD עליונה */
-        .hud-interface {
+        /* HUD - Stark Aesthetic */
+        .hud-layer {
             position: absolute; inset: 0; z-index: 10;
-            pointer-events: none; padding: 3vw;
-            display: flex; flex-direction: column;
-            justify-content: space-between;
+            pointer-events: none; padding: 2.5vw;
+            display: flex; flex-direction: column; justify-content: space-between;
         }
 
-        .hud-header {
-            display: flex; justify-content: space-between; align-items: flex-start;
+        .top-nav { display: flex; justify-content: space-between; align-items: flex-start; }
+
+        .brand-section {
+            border-right: 2px solid #00f2ff; padding-right: 20px;
+            background: linear-gradient(-90deg, rgba(0,242,255,0.05), transparent);
+        }
+        .brand-section h1 { margin: 0; font-size: 2rem; font-weight: 900; letter-spacing: 8px; }
+        .brand-section small { color: #ff9d00; font-weight: 300; font-size: 10px; letter-spacing: 2px; }
+
+        .mission-widget {
+            background: rgba(0, 242, 255, 0.03);
+            border: 1px solid rgba(0, 242, 255, 0.2);
+            padding: 15px; width: 220px;
+            backdrop-filter: blur(8px);
+            position: relative;
+        }
+        .mission-widget::before {
+            content: ''; position: absolute; top: -1px; left: -1px; width: 10px; height: 10px;
+            border-top: 2px solid #00f2ff; border-left: 2px solid #00f2ff;
         }
 
-        .user-profile {
-            border-right: 4px solid #00f2ff;
-            padding-right: 20px;
-            background: linear-gradient(-90deg, rgba(0,242,255,0.1), transparent);
+        .progress-track {
+            width: 100%; height: 2px; background: rgba(255,255,255,0.1); margin: 10px 0;
+            position: relative; overflow: hidden;
         }
+        #progress-bar { width: 0%; height: 100%; background: #00f2ff; transition: width 0.4s ease; }
 
-        .user-profile h1 {
-            margin: 0; font-size: clamp(1.5rem, 4vw, 2.5rem);
-            font-weight: 900; letter-spacing: 10px;
-            text-shadow: 0 0 20px rgba(0,242,255,0.7);
-        }
+        .status-footer { display: flex; justify-content: space-between; align-items: flex-end; }
+        
+        .stat-item { font-size: 10px; letter-spacing: 1px; opacity: 0.6; line-height: 1.5; }
+        .stat-value { color: #00f2ff; opacity: 1; font-weight: bold; }
 
-        .system-specs {
-            text-align: left; font-size: 10px; opacity: 0.7; letter-spacing: 2px;
-        }
-
-        .hud-footer {
-            display: flex; justify-content: space-between; align-items: flex-end;
-        }
-
-        .status-box {
-            font-size: 12px; border: 1px solid rgba(0,242,255,0.3);
-            padding: 10px 20px; background: rgba(0,0,0,0.5);
-            backdrop-filter: blur(10px);
-        }
-
-        /* מסך פתיחה */
-        #loading-overlay {
+        /* מסך פתיחה אלגנטי */
+        #auth-screen {
             position: fixed; inset: 0; background: #000; z-index: 1000;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
-            transition: opacity 1s ease;
+            transition: 1s ease-in-out;
         }
-
-        .loader-ring {
-            width: 100px; height: 100px; border: 2px solid rgba(0,242,255,0.1);
-            border-top: 2px solid #00f2ff; border-radius: 50%;
-            animation: spin 1s linear infinite; margin-bottom: 20px;
+        .auth-btn {
+            background: none; border: 1px solid #00f2ff; color: #00f2ff;
+            padding: 15px 60px; font-size: 14px; letter-spacing: 5px; cursor: pointer;
+            transition: 0.4s;
         }
+        .auth-btn:hover { background: #00f2ff; color: #000; box-shadow: 0 0 40px rgba(0,242,255,0.4); }
 
-        @keyframes spin { 100% { transform: rotate(360deg); } }
-
-        .btn-start {
-            background: transparent; border: 1px solid #00f2ff;
-            color: #00f2ff; padding: 15px 50px; cursor: pointer;
-            font-family: 'Inter', sans-serif; letter-spacing: 5px;
-            transition: 0.4s; font-weight: bold;
-        }
-        .btn-start:hover { background: #00f2ff; color: #000; box-shadow: 0 0 30px #00f2ff; }
-
-        /* אפקטי סריקה */
-        .scanline {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), 
-                        linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
-            background-size: 100% 2px, 3px 100%;
-            z-index: 5; pointer-events: none; opacity: 0.3;
+        #level-up-toast {
+            position: fixed; top: 20%; left: 50%; transform: translate(-50%, -50%);
+            font-size: 4rem; font-weight: 900; opacity: 0; pointer-events: none;
+            color: #fff; text-shadow: 0 0 30px #00f2ff; z-index: 100;
         }
     </style>
 </head>
 <body>
 
-    <div id="loading-overlay">
-        <div class="loader-ring"></div>
-        <div style="letter-spacing: 15px; margin-bottom: 30px;">SKOR-OS</div>
-        <button class="btn-start" onclick="initializeSite()">AUTHENTICATE</button>
+    <div id="auth-screen" onclick="launchMkV()">
+        <div style="font-size: 10px; letter-spacing: 15px; margin-bottom: 20px; opacity: 0.5;">SKOR-OS MK-V</div>
+        <button class="auth-btn">INITIALIZE CORE</button>
     </div>
 
-    <div id="video-background">
+    <div id="level-up-toast">LEVEL CLEARED</div>
+
+    <div id="video-container">
         <video id="webcam" autoplay playsinline></video>
     </div>
 
-    <div class="scanline"></div>
     <div id="canvas-container"></div>
 
-    <div class="hud-interface">
-        <header class="hud-header">
-            <div class="user-profile">
-                <h1 id="user-name">ELIAV SKORNICK</h1>
-                <div style="color: #ff9d00; font-size: 12px; margin-top: 5px;">LEVEL 10 ARCHITECT // SKORCHAT CORE ACTIVE</div>
+    <div class="hud-layer">
+        <div class="top-nav">
+            <div class="brand-section">
+                <h1>ELIAV SKORNICK</h1>
+                <small>CHIEF AI ARCHITECT // MK-V PROTOCOL</small>
             </div>
-            <div class="system-specs">
-                OS_VER: 3.0.4<br>
-                AUTH_KEY: SK-9921<br>
-                SEC_LEVEL: ALPHA
+            <div class="mission-widget">
+                <div style="font-size: 10px; color: #ff9d00; margin-bottom: 5px;" id="stage-num">STAGE 01</div>
+                <div style="font-size: 12px; font-weight: bold;" id="mission-title">CORE ALIGNMENT</div>
+                <div class="progress-track"><div id="progress-bar"></div></div>
+                <div style="font-size: 9px; opacity: 0.7;" id="mission-task">DRAG FRAGMENTS TO CENTRAL CORE</div>
             </div>
-        </header>
+        </div>
 
-        <footer class="hud-footer">
-            <div class="status-box">
-                <span style="color: rgba(255,255,255,0.5);">SIGNAL:</span> <span id="signal-status">SEARCHING...</span>
+        <div class="status-footer">
+            <div class="stat-item">
+                NEURAL SYNC: <span class="stat-value" id="sync-val">0.0%</span><br>
+                GPS_REF: <span class="stat-value">32.0853° N, 34.7818° E</span><br>
+                OBJECTIVE: <span class="stat-value" id="obj-val">ACTIVE</span>
             </div>
-            <div style="text-align: right; font-size: 10px; line-height: 1.8;">
-                LOCATION: SECTOR 42 - TEL AVIV<br>
-                NEURAL SYNC: <span id="sync-val">0.0%</span><br>
-                PROTOCOLS: JARVIS_V2
+            <div style="text-align: right;" class="stat-item">
+                SCORE: <span class="stat-value" id="score-val">0000</span><br>
+                SYSTEM_STATUS: <span class="stat-value" style="color: #00ff00;">STABLE</span><br>
+                STARK_OS // 2026
             </div>
-        </footer>
+        </div>
     </div>
 
     <script>
         let scene, camera, renderer, clock;
         let handCursor, handTarget = new THREE.Vector3();
         let core, fragments = [];
-        let isPinching = false;
-        let grabbed = null;
+        let isPinching = false, grabbed = null;
+        
+        // Game Logic
+        let currentStage = 1;
+        let score = 0;
+        let progress = 0;
 
-        function init3D() {
+        const stageData = [
+            { title: "CORE ALIGNMENT", task: "DRAG FRAGMENTS TO CENTRAL CORE", color: 0x00f2ff },
+            { title: "THREAT NEUTRALIZATION", task: "PINCH RED ANOMALIES TO ERASE", color: 0xff0000 },
+            { title: "DATA STABILIZATION", task: "HOLD THE CORE STEADY IN CENTER", color: 0xff9d00 }
+        ];
+
+        function initThree() {
             scene = new THREE.Scene();
             camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
             camera.position.z = 100;
@@ -163,116 +163,166 @@
             renderer.setPixelRatio(window.devicePixelRatio);
             document.getElementById('canvas-container').appendChild(renderer.domElement);
 
-            // 1. כוונת איירון מן (Hand Cursor)
-            const ringGeo = new THREE.TorusGeometry(4, 0.2, 16, 100);
+            // הכוונת המדויקת של איירון מן
+            const ringGeo = new THREE.TorusGeometry(5, 0.15, 16, 100);
             const ringMat = new THREE.MeshBasicMaterial({ color: 0x00f2ff, transparent: true, opacity: 0.8 });
             handCursor = new THREE.Mesh(ringGeo, ringMat);
             scene.add(handCursor);
 
-            // 2. ליבת SkorChat (המרכז)
-            const coreGeo = new THREE.DodecahedronGeometry(12, 0);
-            const coreWire = new THREE.WireframeGeometry(coreGeo);
-            core = new THREE.LineSegments(coreWire, new THREE.LineBasicMaterial({ color: 0xff9d00 }));
-            core.name = "SKOR_CORE";
-            scene.add(core);
-            fragments.push(core);
+            // הוספת צלבים קטנים בתוך הכוונת
+            const crossGeo = new THREE.BoxGeometry(4, 0.05, 0.05);
+            const cross1 = new THREE.Mesh(crossGeo, ringMat);
+            const cross2 = new THREE.Mesh(crossGeo, ringMat);
+            cross2.rotation.z = Math.PI / 2;
+            handCursor.add(cross1, cross2);
 
-            // 3. חלקיקי נתונים מרחפים
-            const info = ["SKORCHAT", "AI", "FUTURE", "ELIAV", "STARK"];
-            for(let i=0; i<5; i++) {
-                const geo = new THREE.OctahedronGeometry(4, 0);
-                const wire = new THREE.WireframeGeometry(geo);
-                const mesh = new THREE.LineSegments(wire, new THREE.LineBasicMaterial({ color: 0x00f2ff, transparent: true, opacity: 0.5 }));
-                const angle = (i / 5) * Math.PI * 2;
-                mesh.position.set(Math.cos(angle) * 45, Math.sin(angle) * 45, (Math.random()-0.5)*20);
-                scene.add(mesh);
-                fragments.push(mesh);
-            }
+            // ליבה מרכזית גיאומטרית
+            const coreGeo = new THREE.IcosahedronGeometry(12, 1);
+            core = new THREE.LineSegments(
+                new THREE.WireframeGeometry(coreGeo),
+                new THREE.LineBasicMaterial({ color: 0x00f2ff, transparent: true, opacity: 0.4 })
+            );
+            scene.add(core);
+
+            spawnFragments();
 
             clock = new THREE.Clock();
             animate();
         }
 
-        async function initializeSite() {
-            gsap.to("#loading-overlay", { opacity: 0, duration: 1, onComplete: () => document.getElementById('loading-overlay').remove() });
+        function spawnFragments() {
+            fragments.forEach(f => scene.remove(f));
+            fragments = [];
+            const color = currentStage === 2 ? 0xff4444 : 0x00f2ff;
             
-            init3D();
+            for(let i=0; i<6; i++) {
+                const geo = new THREE.OctahedronGeometry(4, 0);
+                const mesh = new THREE.LineSegments(
+                    new THREE.WireframeGeometry(geo),
+                    new THREE.LineBasicMaterial({ color: color, transparent: true, opacity: 0.7 })
+                );
+                const angle = (i / 6) * Math.PI * 2;
+                mesh.position.set(Math.cos(angle)*65, Math.sin(angle)*65, (Math.random()-0.5)*20);
+                scene.add(mesh);
+                fragments.push(mesh);
+            }
+        }
 
+        async function launchMkV() {
+            gsap.to("#auth-screen", { opacity: 0, scale: 1.1, duration: 0.8, onComplete: () => document.getElementById('auth-screen').remove() });
+            initThree();
+
+            const hands = new Hands({ locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}` });
+            hands.setOptions({ maxNumHands: 1, modelComplexity: 1, minDetectionConfidence: 0.85, minTrackingConfidence: 0.85 });
+            
+            hands.onResults(onResults);
+            
             const video = document.getElementById('webcam');
             const stream = await navigator.mediaDevices.getUserMedia({ video: true });
             video.srcObject = stream;
-
-            const hands = new Hands({ locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}` });
-            hands.setOptions({ maxNumHands: 1, modelComplexity: 1, minDetectionConfidence: 0.8, minTrackingConfidence: 0.8 });
-            
-            hands.onResults(results => {
-                if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
-                    document.getElementById('signal-status').innerText = "CONNECTED";
-                    document.getElementById('signal-status').style.color = "#00ff00";
-                    
-                    const lm = results.multiHandLandmarks[0];
-                    const index = lm[8];
-                    const thumb = lm[4];
-
-                    // Mapping
-                    handTarget.x = (0.5 - index.x) * 180;
-                    handTarget.y = (0.5 - index.y) * 120;
-
-                    // Pinch (Grab) detection
-                    const d = Math.sqrt(Math.pow(index.x-thumb.x, 2) + Math.pow(index.y-thumb.y, 2));
-                    if(d < 0.05) {
-                        if(!isPinching) grabObj();
-                        isPinching = true;
-                    } else {
-                        isPinching = false;
-                        grabbed = null;
-                    }
-
-                    document.getElementById('sync-val').innerText = (90 + Math.random()*9).toFixed(1) + "%";
-                } else {
-                    document.getElementById('signal-status').innerText = "LOST SIGNAL";
-                    document.getElementById('signal-status').style.color = "#ff0000";
-                }
-            });
-
             const cam = new Camera(video, { onFrame: async () => await hands.send({image: video}), width: 1280, height: 720 });
             cam.start();
         }
 
-        function grabObj() {
+        function onResults(res) {
+            if (res.multiHandLandmarks && res.multiHandLandmarks.length > 0) {
+                const lm = res.multiHandLandmarks[0];
+                const index = lm[8];
+                const thumb = lm[4];
+
+                handTarget.x = (0.5 - index.x) * 220;
+                handTarget.y = (0.5 - index.y) * 140;
+
+                const d = Math.sqrt(Math.pow(index.x-thumb.x, 2) + Math.pow(index.y-thumb.y, 2));
+                if(d < 0.045) {
+                    if(!isPinching) attemptGrab();
+                    isPinching = true;
+                } else {
+                    isPinching = false;
+                    grabbed = null;
+                }
+                document.getElementById('sync-val').innerText = (97 + Math.random()*2).toFixed(1) + "%";
+            }
+        }
+
+        function attemptGrab() {
             let minD = 25;
             fragments.forEach(f => {
-                const d = f.position.distanceTo(handCursor.position);
-                if(d < minD) {
-                    minD = d;
+                const dist = f.position.distanceTo(handCursor.position);
+                if(dist < minD) {
                     grabbed = f;
+                    if(currentStage === 2) {
+                        gsap.to(f.scale, { x: 0, y: 0, z: 0, duration: 0.3, onComplete: () => {
+                            scene.remove(f);
+                            updateProgress(18);
+                        }});
+                    }
                 }
             });
+            if(currentStage === 3 && core.position.distanceTo(handCursor.position) < 20) grabbed = core;
+        }
+
+        function updateProgress(val) {
+            progress += val;
+            if(progress >= 100) {
+                progress = 100;
+                levelUp();
+            }
+            document.getElementById('progress-bar').style.width = progress + "%";
+            score += val * 12;
+            document.getElementById('score-val').innerText = score.toString().padStart(4, '0');
+        }
+
+        function levelUp() {
+            currentStage++;
+            progress = 0;
+            document.getElementById('progress-bar').style.width = "0%";
+            
+            const toast = document.getElementById('level-up-toast');
+            gsap.fromTo(toast, { opacity: 1, scale: 0.8 }, { opacity: 0, scale: 1.5, duration: 1.5 });
+
+            if(currentStage > 3) {
+                document.getElementById('mission-title').innerText = "SYSTEM MASTERED";
+                document.getElementById('mission-task').innerText = "ELIAV SKORNICK: LEVEL ELITE ARCHITECT";
+                return;
+            }
+
+            const data = stageData[currentStage-1];
+            document.getElementById('stage-num').innerText = `STAGE 0${currentStage}`;
+            document.getElementById('mission-title').innerText = data.title;
+            document.getElementById('mission-task').innerText = data.task;
+            
+            spawnFragments();
         }
 
         function animate() {
             requestAnimationFrame(animate);
             const t = clock.getElapsedTime();
 
-            // Cursor follows hand
-            handCursor.position.lerp(handTarget, 0.15);
-            handCursor.rotation.z += 0.05;
+            // כוונת עוקבת
+            handCursor.position.lerp(handTarget, 0.2);
+            handCursor.rotation.z += 0.03;
 
-            // Physics & Motion
-            fragments.forEach((f, i) => {
-                if(f === grabbed) {
-                    f.position.lerp(handTarget, 0.2);
-                    f.rotation.x += 0.1;
-                } else {
-                    f.rotation.y += 0.01;
-                    if(f.name !== "SKOR_CORE") {
-                        f.position.y += Math.sin(t + i) * 0.03;
+            if(grabbed) {
+                grabbed.position.lerp(handTarget, 0.3);
+                if(currentStage === 1 && grabbed !== core) {
+                    if(grabbed.position.distanceTo(core.position) < 15) {
+                        scene.remove(grabbed);
+                        grabbed = null;
+                        updateProgress(20);
                     }
                 }
-            });
+            }
 
-            core.rotation.x = Math.sin(t * 0.5) * 0.2;
-            core.rotation.y += 0.02;
+            // אנימציות ליבה
+            if(currentStage === 3) {
+                core.position.x = Math.sin(t * 15) * 4;
+                core.position.y = Math.cos(t * 12) * 4;
+                if(grabbed === core) updateProgress(0.4);
+            } else {
+                core.rotation.y += 0.01;
+                core.rotation.z = Math.sin(t * 0.5) * 0.1;
+            }
 
             renderer.render(scene, camera);
         }
