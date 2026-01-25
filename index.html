@@ -1,289 +1,246 @@
-<!DOCTYPE html>
-<html lang="he" dir="rtl">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SkorOS | Eliav Skornick - AI Architect</title>
+import React, { useState, useEffect, useRef } from 'react';
+import { 
+  Send, 
+  Image as ImageIcon, 
+  X, 
+  Loader2, 
+  Zap, 
+  Cloud, 
+  User, 
+  Cpu 
+} from 'lucide-react';
+
+/**
+ * SkorChat Pro - Vision Edition
+ * Inventor: Eliav Skornick
+ * Powered by Gemini 2.5 Flash
+ */
+
+const apiKey = ""; // Runtime provided key
+
+const SkorChatPro = () => {
+  const [messages, setMessages] = useState([
+    { role: 'assistant', text: "שלום אליאב! אני SkorChat Pro. המערכת מוכנה לפקודתך. איך אבא שלי רוצה להתקדם היום? 🚀" }
+  ]);
+  const [input, setInput] = useState("");
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const chatEndRef = useRef(null);
+  const fileInputRef = useRef(null);
+
+  // Auto-scroll to bottom
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  // Handle Image Selection
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setSelectedImage(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // API Call with Exponential Backoff
+  const callGeminiVision = async (prompt, base64Image) => {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
     
-    <!-- Libraries -->
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    const payload = {
+      contents: [{
+        role: "user",
+        parts: [
+          { text: prompt || "תאר מה אתה רואה בתמונה הזו בפירוט." },
+          { 
+            inlineData: { 
+              mimeType: "image/png", 
+              data: base64Image.split(',')[1] 
+            } 
+          }
+        ]
+      }]
+    };
 
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100;400;900&display=swap');
-
-        body, html {
-            margin: 0; padding: 0; width: 100%; height: 100%;
-            background-color: #000; color: #00f2ff;
-            font-family: 'Inter', sans-serif; overflow: hidden;
-            text-transform: uppercase;
-        }
-
-        /* רקע מצלמה - פרוס על הכל עם פילטר */
-        #video-background {
-            position: fixed; inset: 0; z-index: 0;
-            transform: scaleX(-1);
-            opacity: 0.25;
-            filter: grayscale(100%) brightness(0.5) contrast(1.2);
-        }
-        video { width: 100%; height: 100%; object-fit: cover; }
-
-        #canvas-container {
-            position: absolute; inset: 0; z-index: 2;
-            pointer-events: none; /* מאפשר לגעת באלמנטים מתחת אם יש כאלה */
-        }
-
-        /* שכבת HUD עליונה */
-        .hud-interface {
-            position: absolute; inset: 0; z-index: 10;
-            pointer-events: none; padding: 3vw;
-            display: flex; flex-direction: column;
-            justify-content: space-between;
-        }
-
-        .hud-header {
-            display: flex; justify-content: space-between; align-items: flex-start;
-        }
-
-        .user-profile {
-            border-right: 4px solid #00f2ff;
-            padding-right: 20px;
-            background: linear-gradient(-90deg, rgba(0,242,255,0.1), transparent);
-        }
-
-        .user-profile h1 {
-            margin: 0; font-size: clamp(1.5rem, 4vw, 2.5rem);
-            font-weight: 900; letter-spacing: 10px;
-            text-shadow: 0 0 20px rgba(0,242,255,0.7);
-        }
-
-        .system-specs {
-            text-align: left; font-size: 10px; opacity: 0.7; letter-spacing: 2px;
-        }
-
-        .hud-footer {
-            display: flex; justify-content: space-between; align-items: flex-end;
-        }
-
-        .status-box {
-            font-size: 12px; border: 1px solid rgba(0,242,255,0.3);
-            padding: 10px 20px; background: rgba(0,0,0,0.5);
-            backdrop-filter: blur(10px);
-        }
-
-        /* מסך פתיחה */
-        #loading-overlay {
-            position: fixed; inset: 0; background: #000; z-index: 1000;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            transition: opacity 1s ease;
-        }
-
-        .loader-ring {
-            width: 100px; height: 100px; border: 2px solid rgba(0,242,255,0.1);
-            border-top: 2px solid #00f2ff; border-radius: 50%;
-            animation: spin 1s linear infinite; margin-bottom: 20px;
-        }
-
-        @keyframes spin { 100% { transform: rotate(360deg); } }
-
-        .btn-start {
-            background: transparent; border: 1px solid #00f2ff;
-            color: #00f2ff; padding: 15px 50px; cursor: pointer;
-            font-family: 'Inter', sans-serif; letter-spacing: 5px;
-            transition: 0.4s; font-weight: bold;
-        }
-        .btn-start:hover { background: #00f2ff; color: #000; box-shadow: 0 0 30px #00f2ff; }
-
-        /* אפקטי סריקה */
-        .scanline {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), 
-                        linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
-            background-size: 100% 2px, 3px 100%;
-            z-index: 5; pointer-events: none; opacity: 0.3;
-        }
-    </style>
-</head>
-<body>
-
-    <div id="loading-overlay">
-        <div class="loader-ring"></div>
-        <div style="letter-spacing: 15px; margin-bottom: 30px;">SKOR-OS</div>
-        <button class="btn-start" onclick="initializeSite()">AUTHENTICATE</button>
-    </div>
-
-    <div id="video-background">
-        <video id="webcam" autoplay playsinline></video>
-    </div>
-
-    <div class="scanline"></div>
-    <div id="canvas-container"></div>
-
-    <div class="hud-interface">
-        <header class="hud-header">
-            <div class="user-profile">
-                <h1 id="user-name">ELIAV SKORNICK</h1>
-                <div style="color: #ff9d00; font-size: 12px; margin-top: 5px;">LEVEL 10 ARCHITECT // SKORCHAT CORE ACTIVE</div>
-            </div>
-            <div class="system-specs">
-                OS_VER: 3.0.4<br>
-                AUTH_KEY: SK-9921<br>
-                SEC_LEVEL: ALPHA
-            </div>
-        </header>
-
-        <footer class="hud-footer">
-            <div class="status-box">
-                <span style="color: rgba(255,255,255,0.5);">SIGNAL:</span> <span id="signal-status">SEARCHING...</span>
-            </div>
-            <div style="text-align: right; font-size: 10px; line-height: 1.8;">
-                LOCATION: SECTOR 42 - TEL AVIV<br>
-                NEURAL SYNC: <span id="sync-val">0.0%</span><br>
-                PROTOCOLS: JARVIS_V2
-            </div>
-        </footer>
-    </div>
-
-    <script>
-        let scene, camera, renderer, clock;
-        let handCursor, handTarget = new THREE.Vector3();
-        let core, fragments = [];
-        let isPinching = false;
-        let grabbed = null;
-
-        function init3D() {
-            scene = new THREE.Scene();
-            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-            camera.position.z = 100;
-
-            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setPixelRatio(window.devicePixelRatio);
-            document.getElementById('canvas-container').appendChild(renderer.domElement);
-
-            // 1. כוונת איירון מן (Hand Cursor)
-            const ringGeo = new THREE.TorusGeometry(4, 0.2, 16, 100);
-            const ringMat = new THREE.MeshBasicMaterial({ color: 0x00f2ff, transparent: true, opacity: 0.8 });
-            handCursor = new THREE.Mesh(ringGeo, ringMat);
-            scene.add(handCursor);
-
-            // 2. ליבת SkorChat (המרכז)
-            const coreGeo = new THREE.DodecahedronGeometry(12, 0);
-            const coreWire = new THREE.WireframeGeometry(coreGeo);
-            core = new THREE.LineSegments(coreWire, new THREE.LineBasicMaterial({ color: 0xff9d00 }));
-            core.name = "SKOR_CORE";
-            scene.add(core);
-            fragments.push(core);
-
-            // 3. חלקיקי נתונים מרחפים
-            const info = ["SKORCHAT", "AI", "FUTURE", "ELIAV", "STARK"];
-            for(let i=0; i<5; i++) {
-                const geo = new THREE.OctahedronGeometry(4, 0);
-                const wire = new THREE.WireframeGeometry(geo);
-                const mesh = new THREE.LineSegments(wire, new THREE.LineBasicMaterial({ color: 0x00f2ff, transparent: true, opacity: 0.5 }));
-                const angle = (i / 5) * Math.PI * 2;
-                mesh.position.set(Math.cos(angle) * 45, Math.sin(angle) * 45, (Math.random()-0.5)*20);
-                scene.add(mesh);
-                fragments.push(mesh);
-            }
-
-            clock = new THREE.Clock();
-            animate();
-        }
-
-        async function initializeSite() {
-            gsap.to("#loading-overlay", { opacity: 0, duration: 1, onComplete: () => document.getElementById('loading-overlay').remove() });
-            
-            init3D();
-
-            const video = document.getElementById('webcam');
-            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-            video.srcObject = stream;
-
-            const hands = new Hands({ locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}` });
-            hands.setOptions({ maxNumHands: 1, modelComplexity: 1, minDetectionConfidence: 0.8, minTrackingConfidence: 0.8 });
-            
-            hands.onResults(results => {
-                if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
-                    document.getElementById('signal-status').innerText = "CONNECTED";
-                    document.getElementById('signal-status').style.color = "#00ff00";
-                    
-                    const lm = results.multiHandLandmarks[0];
-                    const index = lm[8];
-                    const thumb = lm[4];
-
-                    // Mapping
-                    handTarget.x = (0.5 - index.x) * 180;
-                    handTarget.y = (0.5 - index.y) * 120;
-
-                    // Pinch (Grab) detection
-                    const d = Math.sqrt(Math.pow(index.x-thumb.x, 2) + Math.pow(index.y-thumb.y, 2));
-                    if(d < 0.05) {
-                        if(!isPinching) grabObj();
-                        isPinching = true;
-                    } else {
-                        isPinching = false;
-                        grabbed = null;
-                    }
-
-                    document.getElementById('sync-val').innerText = (90 + Math.random()*9).toFixed(1) + "%";
-                } else {
-                    document.getElementById('signal-status').innerText = "LOST SIGNAL";
-                    document.getElementById('signal-status').style.color = "#ff0000";
-                }
-            });
-
-            const cam = new Camera(video, { onFrame: async () => await hands.send({image: video}), width: 1280, height: 720 });
-            cam.start();
-        }
-
-        function grabObj() {
-            let minD = 25;
-            fragments.forEach(f => {
-                const d = f.position.distanceTo(handCursor.position);
-                if(d < minD) {
-                    minD = d;
-                    grabbed = f;
-                }
-            });
-        }
-
-        function animate() {
-            requestAnimationFrame(animate);
-            const t = clock.getElapsedTime();
-
-            // Cursor follows hand
-            handCursor.position.lerp(handTarget, 0.15);
-            handCursor.rotation.z += 0.05;
-
-            // Physics & Motion
-            fragments.forEach((f, i) => {
-                if(f === grabbed) {
-                    f.position.lerp(handTarget, 0.2);
-                    f.rotation.x += 0.1;
-                } else {
-                    f.rotation.y += 0.01;
-                    if(f.name !== "SKOR_CORE") {
-                        f.position.y += Math.sin(t + i) * 0.03;
-                    }
-                }
-            });
-
-            core.rotation.x = Math.sin(t * 0.5) * 0.2;
-            core.rotation.y += 0.02;
-
-            renderer.render(scene, camera);
-        }
-
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
+    let delay = 1000;
+    for (let i = 0; i < 5; i++) {
+      try {
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
         });
-    </script>
-</body>
-</html>
+        if (!response.ok) throw new Error('API Error');
+        const data = await response.json();
+        return data.candidates?.[0]?.content?.parts?.[0]?.text;
+      } catch (err) {
+        if (i === 4) throw err;
+        await new Promise(resolve => setTimeout(resolve, delay));
+        delay *= 2;
+      }
+    }
+  };
 
+  const handleSend = async () => {
+    if (!input.trim() && !selectedImage) return;
+
+    const currentInput = input;
+    const currentImage = selectedImage;
+    
+    // Add user message to UI
+    const userMsg = { role: 'user', text: currentInput, image: currentImage };
+    setMessages(prev => [...prev, userMsg]);
+    
+    setInput("");
+    setSelectedImage(null);
+    setIsAnalyzing(true);
+
+    try {
+      let responseText;
+      if (currentImage) {
+        // Image Analysis Path
+        responseText = await callGeminiVision(currentInput, currentImage);
+      } else {
+        // Pure Text Path (simplified for this version)
+        const textUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+        const res = await fetch(textUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ contents: [{ parts: [{ text: currentInput }] }] })
+        });
+        const data = await res.json();
+        responseText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      }
+
+      setMessages(prev => [...prev, { role: 'assistant', text: responseText }]);
+    } catch (err) {
+      setMessages(prev => [...prev, { role: 'assistant', text: "מצטער אליאב, קרתה שגיאה בחיבור למערכת. נסה שוב." }]);
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
+  return (
+    <div className="flex flex-col h-screen bg-black text-white font-sans overflow-hidden">
+      
+      {/* Header - Based on Screenshot */}
+      <header className="flex justify-between items-center p-6 border-b border-white/5 bg-black/80 backdrop-blur-md z-10">
+        <div className="flex items-center gap-2">
+          <div className="w-2 h-2 bg-[#4ade80] rounded-full animate-pulse shadow-[0_0_8px_#4ade80]" />
+          <span className="text-[10px] tracking-widest uppercase font-bold text-gray-400">Cloud Connected</span>
+        </div>
+        <div className="text-right">
+          <h1 className="text-xl font-black tracking-tighter">SkorChat <span className="text-[#4ade80]">Pro</span></h1>
+          <p className="text-[8px] tracking-[0.3em] uppercase text-gray-500">Eliav Skornick Edition</p>
+        </div>
+      </header>
+
+      {/* Chat Area */}
+      <main className="flex-1 overflow-y-auto p-4 space-y-6 flex flex-col items-center">
+        <div className="w-full max-w-2xl space-y-6 pb-20">
+          {messages.map((m, i) => (
+            <div key={i} className={`flex flex-col ${m.role === 'user' ? 'items-end' : 'items-start'} animate-in fade-in slide-in-from-bottom-2`}>
+              <div className={`group relative max-w-[85%] md:max-w-[75%] p-4 rounded-2xl ${
+                m.role === 'user' 
+                ? 'bg-[#1a1a1a] text-white border border-white/10' 
+                : 'bg-[#111] text-gray-200 border border-white/5 shadow-xl'
+              }`}>
+                {m.image && (
+                  <img src={m.image} alt="Upload" className="w-full h-auto rounded-lg mb-3 border border-white/10" />
+                )}
+                <p className="text-sm leading-relaxed text-right dir-rtl">{m.text}</p>
+                
+                {/* Visual Label for Assistant */}
+                {m.role === 'assistant' && (
+                  <div className="absolute -bottom-5 right-2 text-[8px] uppercase tracking-widest text-gray-600 font-bold">
+                    Skor System Response
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+          {isAnalyzing && (
+            <div className="flex items-center gap-3 text-gray-500 text-xs animate-pulse p-4">
+              <Loader2 className="animate-spin w-4 h-4" />
+              <span>מנתח נתונים ב-Sector 42...</span>
+            </div>
+          )}
+          <div ref={chatEndRef} />
+        </div>
+      </main>
+
+      {/* Input Section - Based on Screenshot */}
+      <footer className="p-6 bg-gradient-to-t from-black via-black to-transparent">
+        <div className="max-w-2xl mx-auto relative group">
+          
+          {/* Image Preview Thumbnail */}
+          {selectedImage && (
+            <div className="absolute -top-24 left-0 p-2 bg-[#1a1a1a] border border-white/10 rounded-xl animate-in zoom-in-95">
+              <img src={selectedImage} alt="Preview" className="w-16 h-16 object-cover rounded-lg" />
+              <button 
+                onClick={() => setSelectedImage(null)}
+                className="absolute -top-2 -right-2 bg-red-500 rounded-full p-1 hover:bg-red-600 transition-colors"
+              >
+                <X size={10} />
+              </button>
+            </div>
+          )}
+
+          <div className="flex items-center gap-3 bg-[#111] border border-white/10 rounded-3xl p-2 px-4 focus-within:border-[#4ade80]/50 transition-all shadow-2xl">
+            <button 
+              onClick={() => fileInputRef.current.click()}
+              className="p-3 text-gray-400 hover:text-[#4ade80] transition-colors rounded-full hover:bg-white/5"
+            >
+              <ImageIcon size={20} />
+            </button>
+            <input 
+              type="file" 
+              accept="image/*" 
+              className="hidden" 
+              ref={fileInputRef} 
+              onChange={handleImageChange}
+            />
+            
+            <input 
+              type="text"
+              placeholder="...SkorChat Pro שאל את"
+              className="flex-1 bg-transparent border-none focus:ring-0 text-sm py-3 text-right dir-rtl placeholder:text-gray-600"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+            />
+
+            <button 
+              onClick={handleSend}
+              disabled={isAnalyzing}
+              className={`p-3 rounded-2xl transition-all ${
+                (input.trim() || selectedImage) && !isAnalyzing
+                ? 'bg-[#4ade80] text-black shadow-[0_0_15px_#4ade8088]' 
+                : 'bg-white/5 text-gray-600'
+              }`}
+            >
+              <Send size={20} />
+            </button>
+          </div>
+        </div>
+        
+        <div className="text-center mt-6 text-[9px] tracking-[0.2em] text-gray-600 font-bold uppercase">
+          Inventor: Eliav Skornick | SkorChat Pro V10.0
+        </div>
+      </footer>
+
+      <style>{`
+        .dir-rtl { direction: rtl; }
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.05); border-radius: 10px; }
+        @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+      `}</style>
+    </div>
+  );
+};
+
+export default SkorChatPro;
 
