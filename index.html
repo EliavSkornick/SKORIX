@@ -2,286 +2,320 @@
 <html lang="he" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SkorOS | Eliav Skornick - AI Architect</title>
-    
-    <!-- Libraries -->
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
-
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SkorChat Pro V10.0</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100;400;900&display=swap');
-
-        body, html {
-            margin: 0; padding: 0; width: 100%; height: 100%;
-            background-color: #000; color: #00f2ff;
-            font-family: 'Inter', sans-serif; overflow: hidden;
-            text-transform: uppercase;
+        @import url('https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;600;700;800&display=swap');
+        
+        :root {
+            --eliav-green: #3b8e66;
+            --zinc-950: #09090b;
+            --zinc-900: #18181b;
+            --zinc-800: #27272a;
         }
 
-        /* רקע מצלמה - פרוס על הכל עם פילטר */
-        #video-background {
-            position: fixed; inset: 0; z-index: 0;
-            transform: scaleX(-1);
-            opacity: 0.25;
-            filter: grayscale(100%) brightness(0.5) contrast(1.2);
-        }
-        video { width: 100%; height: 100%; object-fit: cover; }
-
-        #canvas-container {
-            position: absolute; inset: 0; z-index: 2;
-            pointer-events: none; /* מאפשר לגעת באלמנטים מתחת אם יש כאלה */
+        body {
+            font-family: 'Assistant', sans-serif;
+            background-color: #000;
+            color: #fff;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
         }
 
-        /* שכבת HUD עליונה */
-        .hud-interface {
-            position: absolute; inset: 0; z-index: 10;
-            pointer-events: none; padding: 3vw;
-            display: flex; flex-direction: column;
-            justify-content: space-between;
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        
+        /* בועות הודעה לפי העיצוב בתמונה */
+        .bot-bubble {
+            background-color: var(--zinc-900);
+            color: #e4e4e7;
+            border-radius: 1.5rem;
+            border: 1px solid var(--zinc-800);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
         }
 
-        .hud-header {
-            display: flex; justify-content: space-between; align-items: flex-start;
+        .user-bubble {
+            background-color: var(--eliav-green);
+            color: white;
+            border-radius: 1.5rem;
+            box-shadow: 0 4px 15px rgba(59, 142, 102, 0.2);
         }
 
-        .user-profile {
-            border-right: 4px solid #00f2ff;
-            padding-right: 20px;
-            background: linear-gradient(-90deg, rgba(0,242,255,0.1), transparent);
+        /* עיצוב כרטיסיית התמונה */
+        .image-card {
+            background-color: #111111;
+            border-radius: 1.5rem;
+            padding: 12px;
+            border: 1px solid #222;
+            width: 100%;
+            max-width: 400px;
         }
 
-        .user-profile h1 {
-            margin: 0; font-size: clamp(1.5rem, 4vw, 2.5rem);
-            font-weight: 900; letter-spacing: 10px;
-            text-shadow: 0 0 20px rgba(0,242,255,0.7);
+        /* שורת קלט לפי התמונה */
+        .input-container {
+            background-color: #0a0a0a;
+            border: 1px solid #1a1a1a;
+            border-radius: 1.5rem;
+            display: flex;
+            align-items: center;
+            padding: 8px;
         }
 
-        .system-specs {
-            text-align: left; font-size: 10px; opacity: 0.7; letter-spacing: 2px;
+        .btn-send-special {
+            background-color: var(--eliav-green);
+            color: #000;
+            width: 54px;
+            height: 54px;
+            border-radius: 1rem;
+            display: flex;
+            align-items: center;
+            justify-center: center;
+            transition: transform 0.2s;
         }
 
-        .hud-footer {
-            display: flex; justify-content: space-between; align-items: flex-end;
+        .btn-image-special {
+            background-color: #1a1a1a;
+            color: #fff;
+            width: 48px;
+            height: 48px;
+            border-radius: 0.8rem;
+            display: flex;
+            align-items: center;
+            justify-center: center;
         }
 
-        .status-box {
-            font-size: 12px; border: 1px solid rgba(0,242,255,0.3);
-            padding: 10px 20px; background: rgba(0,0,0,0.5);
-            backdrop-filter: blur(10px);
+        /* אנימציות */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
+        .animate-msg { animation: fadeIn 0.3s ease-out forwards; }
 
-        /* מסך פתיחה */
-        #loading-overlay {
-            position: fixed; inset: 0; background: #000; z-index: 1000;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            transition: opacity 1s ease;
+        .processing-text {
+            color: #3b8e66;
+            font-weight: 700;
+            animation: pulse 2s infinite;
         }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
 
-        .loader-ring {
-            width: 100px; height: 100px; border: 2px solid rgba(0,242,255,0.1);
-            border-top: 2px solid #00f2ff; border-radius: 50%;
-            animation: spin 1s linear infinite; margin-bottom: 20px;
-        }
-
-        @keyframes spin { 100% { transform: rotate(360deg); } }
-
-        .btn-start {
-            background: transparent; border: 1px solid #00f2ff;
-            color: #00f2ff; padding: 15px 50px; cursor: pointer;
-            font-family: 'Inter', sans-serif; letter-spacing: 5px;
-            transition: 0.4s; font-weight: bold;
-        }
-        .btn-start:hover { background: #00f2ff; color: #000; box-shadow: 0 0 30px #00f2ff; }
-
-        /* אפקטי סריקה */
-        .scanline {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), 
-                        linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
-            background-size: 100% 2px, 3px 100%;
-            z-index: 5; pointer-events: none; opacity: 0.3;
-        }
+        .prose p { margin-bottom: 0.5rem; }
     </style>
 </head>
 <body>
 
-    <div id="loading-overlay">
-        <div class="loader-ring"></div>
-        <div style="letter-spacing: 15px; margin-bottom: 30px;">SKOR-OS</div>
-        <button class="btn-start" onclick="initializeSite()">AUTHENTICATE</button>
-    </div>
+    <!-- Header לפי התמונה -->
+    <header class="px-6 py-4 flex items-center justify-between border-b border-zinc-900/50 bg-black/80 backdrop-blur-md">
+        <div class="flex items-center gap-2">
+            <span class="text-[10px] text-zinc-500 font-black uppercase tracking-widest">Cloud Connected</span>
+            <div class="w-2 h-2 bg-emerald-500 rounded-full shadow-[0_0_8px_#10b981]"></div>
+        </div>
+        
+        <div class="text-left">
+            <h1 class="text-lg font-[900] italic tracking-tighter leading-none">
+                SkorChat <span class="text-emerald-500 not-italic">Pro</span>
+            </h1>
+            <p class="text-[8px] text-zinc-600 font-bold uppercase tracking-widest mt-1">
+                ELIAV SKORNICK EDITION
+            </p>
+        </div>
+    </header>
 
-    <div id="video-background">
-        <video id="webcam" autoplay playsinline></video>
-    </div>
+    <!-- Chat Area -->
+    <main id="chat-container" class="flex-1 overflow-y-auto p-4 space-y-6 scrollbar-hide">
+        <!-- הודעת פתיחה מהתמונה -->
+        <div class="flex justify-center animate-msg mt-4">
+            <div class="bot-bubble p-6 max-w-[90%] text-center leading-relaxed">
+                <p class="text-[15px]">שלום! אני **SkorChat Pro**. אני יכול לעזור לך בכל שאלה, ובנוסף ליצור תמונות מדהימות! לחץ על כפתור התמונה 🎨 כדי לעבור למצב יצירת תמונות. איך אוכל לעזור לך היום? 🚀</p>
+            </div>
+        </div>
+    </main>
 
-    <div class="scanline"></div>
-    <div id="canvas-container"></div>
+    <!-- Footer -->
+    <footer class="py-2">
+        <p class="text-[9px] text-zinc-800 text-center font-bold tracking-[0.2em] uppercase">
+            INVENTOR: ELIAV SKORNICK | SKORCHAT PRO V10.0
+        </p>
+    </footer>
 
-    <div class="hud-interface">
-        <header class="hud-header">
-            <div class="user-profile">
-                <h1 id="user-name">ELIAV SKORNICK</h1>
-                <div style="color: #ff9d00; font-size: 12px; margin-top: 5px;">LEVEL 10 ARCHITECT // SKORCHAT CORE ACTIVE</div>
-            </div>
-            <div class="system-specs">
-                OS_VER: 3.0.4<br>
-                AUTH_KEY: SK-9921<br>
-                SEC_LEVEL: ALPHA
-            </div>
-        </header>
+    <!-- Input Section -->
+    <div class="p-4 pb-8 bg-black">
+        <div class="max-w-4xl mx-auto">
+            <div class="input-container shadow-2xl">
+                
+                <!-- כפתור שלח (שמאל) -->
+                <button id="btn-send" class="btn-send-special active:scale-95">
+                    <i data-lucide="send" class="w-6 h-6 rotate-[225deg] ml-1"></i>
+                </button>
 
-        <footer class="hud-footer">
-            <div class="status-box">
-                <span style="color: rgba(255,255,255,0.5);">SIGNAL:</span> <span id="signal-status">SEARCHING...</span>
+                <!-- שדה טקסט -->
+                <textarea id="chat-input" rows="1" 
+                    placeholder="שאל את SkorChat Pro..." 
+                    class="flex-1 bg-transparent border-none text-[16px] py-3 px-4 text-white focus:ring-0 font-medium placeholder-zinc-700 resize-none"
+                    dir="rtl"
+                ></textarea>
+
+                <!-- כפתור תמונה (ימין) -->
+                <button id="btn-image" class="btn-image-special active:scale-95 transition-all">
+                    <i data-lucide="image" id="icon-mode" class="w-6 h-6"></i>
+                </button>
             </div>
-            <div style="text-align: right; font-size: 10px; line-height: 1.8;">
-                LOCATION: SECTOR 42 - TEL AVIV<br>
-                NEURAL SYNC: <span id="sync-val">0.0%</span><br>
-                PROTOCOLS: JARVIS_V2
-            </div>
-        </footer>
+        </div>
     </div>
 
     <script>
-        let scene, camera, renderer, clock;
-        let handCursor, handTarget = new THREE.Vector3();
-        let core, fragments = [];
-        let isPinching = false;
-        let grabbed = null;
+        // אליאב, שים את המפתח שקיבלת כאן כדי שזה יעבוד לנצח בחינם:
+        const apiKey = ""; 
+        
+        let isImageMode = false;
+        let isThinking = false;
 
-        function init3D() {
-            scene = new THREE.Scene();
-            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-            camera.position.z = 100;
+        const chatContainer = document.getElementById('chat-container');
+        const chatInput = document.getElementById('chat-input');
+        const btnSend = document.getElementById('btn-send');
+        const btnImage = document.getElementById('btn-image');
+        const iconMode = document.getElementById('icon-mode');
 
-            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setPixelRatio(window.devicePixelRatio);
-            document.getElementById('canvas-container').appendChild(renderer.domElement);
+        lucide.createIcons();
 
-            // 1. כוונת איירון מן (Hand Cursor)
-            const ringGeo = new THREE.TorusGeometry(4, 0.2, 16, 100);
-            const ringMat = new THREE.MeshBasicMaterial({ color: 0x00f2ff, transparent: true, opacity: 0.8 });
-            handCursor = new THREE.Mesh(ringGeo, ringMat);
-            scene.add(handCursor);
-
-            // 2. ליבת SkorChat (המרכז)
-            const coreGeo = new THREE.DodecahedronGeometry(12, 0);
-            const coreWire = new THREE.WireframeGeometry(coreGeo);
-            core = new THREE.LineSegments(coreWire, new THREE.LineBasicMaterial({ color: 0xff9d00 }));
-            core.name = "SKOR_CORE";
-            scene.add(core);
-            fragments.push(core);
-
-            // 3. חלקיקי נתונים מרחפים
-            const info = ["SKORCHAT", "AI", "FUTURE", "ELIAV", "STARK"];
-            for(let i=0; i<5; i++) {
-                const geo = new THREE.OctahedronGeometry(4, 0);
-                const wire = new THREE.WireframeGeometry(geo);
-                const mesh = new THREE.LineSegments(wire, new THREE.LineBasicMaterial({ color: 0x00f2ff, transparent: true, opacity: 0.5 }));
-                const angle = (i / 5) * Math.PI * 2;
-                mesh.position.set(Math.cos(angle) * 45, Math.sin(angle) * 45, (Math.random()-0.5)*20);
-                scene.add(mesh);
-                fragments.push(mesh);
-            }
-
-            clock = new THREE.Clock();
-            animate();
-        }
-
-        async function initializeSite() {
-            gsap.to("#loading-overlay", { opacity: 0, duration: 1, onComplete: () => document.getElementById('loading-overlay').remove() });
-            
-            init3D();
-
-            const video = document.getElementById('webcam');
-            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-            video.srcObject = stream;
-
-            const hands = new Hands({ locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}` });
-            hands.setOptions({ maxNumHands: 1, modelComplexity: 1, minDetectionConfidence: 0.8, minTrackingConfidence: 0.8 });
-            
-            hands.onResults(results => {
-                if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
-                    document.getElementById('signal-status').innerText = "CONNECTED";
-                    document.getElementById('signal-status').style.color = "#00ff00";
-                    
-                    const lm = results.multiHandLandmarks[0];
-                    const index = lm[8];
-                    const thumb = lm[4];
-
-                    // Mapping
-                    handTarget.x = (0.5 - index.x) * 180;
-                    handTarget.y = (0.5 - index.y) * 120;
-
-                    // Pinch (Grab) detection
-                    const d = Math.sqrt(Math.pow(index.x-thumb.x, 2) + Math.pow(index.y-thumb.y, 2));
-                    if(d < 0.05) {
-                        if(!isPinching) grabObj();
-                        isPinching = true;
-                    } else {
-                        isPinching = false;
-                        grabbed = null;
-                    }
-
-                    document.getElementById('sync-val').innerText = (90 + Math.random()*9).toFixed(1) + "%";
-                } else {
-                    document.getElementById('signal-status').innerText = "LOST SIGNAL";
-                    document.getElementById('signal-status').style.color = "#ff0000";
-                }
-            });
-
-            const cam = new Camera(video, { onFrame: async () => await hands.send({image: video}), width: 1280, height: 720 });
-            cam.start();
-        }
-
-        function grabObj() {
-            let minD = 25;
-            fragments.forEach(f => {
-                const d = f.position.distanceTo(handCursor.position);
-                if(d < minD) {
-                    minD = d;
-                    grabbed = f;
-                }
-            });
-        }
-
-        function animate() {
-            requestAnimationFrame(animate);
-            const t = clock.getElapsedTime();
-
-            // Cursor follows hand
-            handCursor.position.lerp(handTarget, 0.15);
-            handCursor.rotation.z += 0.05;
-
-            // Physics & Motion
-            fragments.forEach((f, i) => {
-                if(f === grabbed) {
-                    f.position.lerp(handTarget, 0.2);
-                    f.rotation.x += 0.1;
-                } else {
-                    f.rotation.y += 0.01;
-                    if(f.name !== "SKOR_CORE") {
-                        f.position.y += Math.sin(t + i) * 0.03;
-                    }
-                }
-            });
-
-            core.rotation.x = Math.sin(t * 0.5) * 0.2;
-            core.rotation.y += 0.02;
-
-            renderer.render(scene, camera);
-        }
-
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
+        // גדילה אוטומטית של הטקסט
+        chatInput.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = (this.scrollHeight) + 'px';
         });
+
+        // החלפת מצב
+        btnImage.addEventListener('click', () => {
+            isImageMode = !isImageMode;
+            btnImage.classList.toggle('text-emerald-500', isImageMode);
+            btnImage.classList.toggle('border', isImageMode);
+            btnImage.classList.toggle('border-emerald-500/30', isImageMode);
+            
+            chatInput.placeholder = isImageMode ? "תאר את התמונה שברצונך ליצור..." : "שאל את SkorChat Pro...";
+            iconMode.setAttribute('data-lucide', isImageMode ? 'sparkles' : 'image');
+            lucide.createIcons();
+        });
+
+        async function fetchWithRetry(url, options, retries = 5) {
+            for (let i = 0; i < retries; i++) {
+                try {
+                    const res = await fetch(url, options);
+                    if (res.ok) return await res.json();
+                    await new Promise(r => setTimeout(r, Math.pow(2, i) * 1000));
+                } catch (e) {
+                    if (i === retries - 1) throw e;
+                    await new Promise(r => setTimeout(r, Math.pow(2, i) * 1000));
+                }
+            }
+        }
+
+        function addMessage(text, role) {
+            const wrap = document.createElement('div');
+            wrap.className = `flex ${role === 'user' ? 'justify-end' : 'justify-start'} animate-msg`;
+            
+            const bubble = document.createElement('div');
+            bubble.className = `${role === 'user' ? 'user-bubble' : 'bot-bubble'} p-4 max-w-[85%] text-sm shadow-xl`;
+            
+            const textContent = document.createElement('div');
+            textContent.className = "prose rtl";
+            textContent.innerHTML = marked.parse(text);
+            
+            bubble.appendChild(textContent);
+            wrap.appendChild(bubble);
+            chatContainer.appendChild(wrap);
+            
+            chatContainer.scrollTo({ top: chatContainer.scrollHeight, behavior: 'smooth' });
+        }
+
+        function addImageCard(b64) {
+            const url = `data:image/png;base64,${b64}`;
+            const wrap = document.createElement('div');
+            wrap.className = `flex justify-start animate-msg`;
+            
+            wrap.innerHTML = `
+                <div class="image-card shadow-2xl">
+                    <img src="${url}" class="w-full aspect-square object-cover rounded-xl mb-4" />
+                    <div class="flex items-center justify-between px-1">
+                        <button onclick="downloadImg('${url}')" class="flex items-center gap-2 bg-[#1e2a24] text-[#3b8e66] px-5 py-2.5 rounded-xl text-xs font-bold active:scale-95 transition-all">
+                            <i data-lucide="download" class="w-4 h-4"></i>
+                            הורדה
+                        </button>
+                        <span class="text-[10px] text-zinc-700 font-bold uppercase">נוצר ע"י SkorChat Pro</span>
+                    </div>
+                    <p class="text-center text-white/90 font-medium text-[15px] mt-5 mb-2">✨ הנה התמונה שיצרתי עבורך! ✨</p>
+                </div>
+            `;
+            
+            chatContainer.appendChild(wrap);
+            lucide.createIcons();
+            chatContainer.scrollTo({ top: chatContainer.scrollHeight, behavior: 'smooth' });
+        }
+
+        function downloadImg(url) {
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `SkorChat_Pro_Image_${Date.now()}.png`;
+            a.click();
+        }
+
+        function showProcessing() {
+            const div = document.createElement('div');
+            div.id = 'processing';
+            div.className = 'flex justify-center py-4 animate-msg';
+            div.innerHTML = `<p class="processing-text text-sm">Skor Intelligence מעבד נתונים...</p>`;
+            chatContainer.appendChild(div);
+            chatContainer.scrollTo({ top: chatContainer.scrollHeight, behavior: 'smooth' });
+        }
+
+        async function handleAction() {
+            const p = chatInput.value.trim();
+            if (!p || isThinking) return;
+
+            isThinking = true;
+            addMessage(p, 'user');
+            chatInput.value = '';
+            chatInput.style.height = 'auto';
+            
+            showProcessing();
+
+            try {
+                if (isImageMode) {
+                    const data = await fetchWithRetry(`https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict?key=${apiKey}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ instances: [{ prompt: p }], parameters: { sampleCount: 1 } })
+                    });
+                    document.getElementById('processing').remove();
+                    if (data.predictions?.[0]?.bytesBase64Encoded) {
+                        addImageCard(data.predictions[0].bytesBase64Encoded);
+                    } else throw new Error();
+                } else {
+                    const data = await fetchWithRetry(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            contents: [{ parts: [{ text: p }] }],
+                            systemInstruction: { parts: [{ text: "שמך SkorChat Pro. המייסד הוא אליאב סקורניק. ענה בעברית מפורטת, חכמה, ארוכה ומלאה באימוג'ים." }] }
+                        })
+                    });
+                    document.getElementById('processing').remove();
+                    addMessage(data.candidates[0].content.parts[0].text, 'bot');
+                }
+            } catch (e) {
+                if (document.getElementById('processing')) document.getElementById('processing').remove();
+                addMessage("אליאב, יש לי שגיאה בחיבור. וודא שהכנסת מפתח API תקין.", 'bot');
+            } finally {
+                isThinking = false;
+            }
+        }
+
+        btnSend.addEventListener('click', handleAction);
+        chatInput.addEventListener('keydown', (e) => (e.key === 'Enter' && !e.shiftKey) && (e.preventDefault(), handleAction()));
+
     </script>
 </body>
 </html>
