@@ -28,7 +28,6 @@
 
         .scrollbar-hide::-webkit-scrollbar { display: none; }
         
-        /* בועות הודעה בעיצוב המדויק מהתמונות */
         .bot-bubble {
             background-color: #1c1c1e;
             color: #efefef;
@@ -42,7 +41,6 @@
             border-radius: 1.2rem;
         }
 
-        /* כרטיסיית תמונה - העתק מושלם */
         .image-card {
             background-color: #111;
             border-radius: 1.5rem;
@@ -102,7 +100,6 @@
 </head>
 <body>
 
-    <!-- Header -->
     <header class="px-5 py-4 flex items-center justify-between border-b border-zinc-900 bg-black/90 backdrop-blur-md z-50">
         <div class="flex items-center gap-2">
             <span class="text-[9px] text-zinc-500 font-bold uppercase tracking-[0.2em]">Cloud Connected</span>
@@ -117,9 +114,7 @@
         </div>
     </header>
 
-    <!-- Chat Area -->
     <main id="chat-container" class="flex-1 overflow-y-auto p-4 space-y-5 scrollbar-hide">
-        <!-- הודעת פתיחה -->
         <div class="flex justify-start animate-msg">
             <div class="bot-bubble p-5 max-w-[88%] shadow-lg leading-relaxed">
                 <p class="text-[15px]">שלום! אני **SkorChat Pro**. אני יכול לעזור לך בכל שאלה, ובנוסף ליצור תמונות מדהימות! לחץ על כפתור התמונה 🎨 כדי לעבור למצב יצירת תמונות. איך אוכל לעזור לך היום? 🚀</p>
@@ -127,31 +122,25 @@
         </div>
     </main>
 
-    <!-- Footer Branding -->
     <footer class="py-1">
         <p class="text-[8px] text-zinc-800 text-center font-bold tracking-[0.3em] uppercase">
             INVENTOR: ELIAV SKORNICK | SKORCHAT PRO V10.0
         </p>
     </footer>
 
-    <!-- Input Section -->
     <div class="p-4 pb-10 bg-black">
         <div class="max-w-4xl mx-auto">
             <div class="input-bar-bg flex items-center p-2 shadow-2xl">
-                
-                <!-- כפתור שלח (שמאל) -->
                 <button id="btn-send" class="btn-send-special active:scale-90 shrink-0">
                     <i data-lucide="send" class="w-6 h-6 rotate-[225deg] ml-1"></i>
                 </button>
 
-                <!-- שדה טקסט -->
                 <textarea id="chat-input" rows="1" 
                     placeholder="שאל את SkorChat Pro..." 
                     class="flex-1 bg-transparent border-none text-[16px] py-3 px-3 text-white focus:ring-0 font-medium placeholder-zinc-700 resize-none max-h-32"
                     dir="rtl"
                 ></textarea>
 
-                <!-- כפתור תמונה (ימין) -->
                 <button id="btn-image" class="btn-mode-special active:scale-90 shrink-0 transition-all">
                     <i data-lucide="image" id="icon-mode" class="w-6 h-6"></i>
                 </button>
@@ -160,15 +149,15 @@
     </div>
 
     <script>
-        // אליאב, הכנס את המפתח שלך כאן כדי שזה יעבוד לנצח בחינם:
         const p1 = "AIzaSy";
-const p2 = "AwLZjsisM1DHS2AkOGQ9qF-KOAuerEMAg";
-const apiKey = p1 + p2;
-
-
+        const p2 = "AwLZjsisM1DHS2AkOGQ9qF-KOAuerEMAg";
+        const apiKey = p1 + p2;
 
         let isImageMode = false;
         let isThinking = false;
+        
+        // --- מערך הזיכרון של סקור ---
+        let chatHistory = []; 
 
         const chatContainer = document.getElementById('chat-container');
         const chatInput = document.getElementById('chat-input');
@@ -192,16 +181,17 @@ const apiKey = p1 + p2;
             lucide.createIcons();
         });
 
-        async function fetchWithRetry(url, options, retries = 5) {
+        async function fetchWithRetry(url, options, retries = 3) {
             for (let i = 0; i < retries; i++) {
                 try {
                     const res = await fetch(url, options);
                     if (res.ok) return await res.json();
-                    await new Promise(r => setTimeout(r, Math.pow(2, i) * 1000));
+                    const errorData = await res.json();
+                    console.error("API Error:", errorData);
                 } catch (e) {
                     if (i === retries - 1) throw e;
-                    await new Promise(r => setTimeout(r, Math.pow(2, i) * 1000));
                 }
+                await new Promise(r => setTimeout(r, 1000));
             }
         }
 
@@ -263,32 +253,47 @@ const apiKey = p1 + p2;
 
             isThinking = true;
             addMessage(p, 'user');
+            
+            // הוספה לזיכרון
+            chatHistory.push({ role: "user", parts: [{ text: p }] });
+            
             chatInput.value = '';
             chatInput.style.height = 'auto';
             showProcessing();
 
             try {
                 if (isImageMode) {
-                    const data = await fetchWithRetry(`https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict?key=${apiKey}`, {
+                    // תיקון למודל Imagen עדכני
+                    const data = await fetchWithRetry(`https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-001:predict?key=${apiKey}`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ instances: [{ prompt: p }], parameters: { sampleCount: 1 } })
                     });
-                    document.getElementById('processing').remove();
-                    if (data.predictions?.[0]?.bytesBase64Encoded) {
+                    
+                    if (document.getElementById('processing')) document.getElementById('processing').remove();
+                    
+                    if (data?.predictions?.[0]?.bytesBase64Encoded) {
                         addImageCard(data.predictions[0].bytesBase64Encoded);
-                    } else throw new Error();
+                    } else {
+                        throw new Error("Image failed");
+                    }
                 } else {
-                    const data = await fetchWithRetry(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
+                    const data = await fetchWithRetry(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
-                            contents: [{ parts: [{ text: p }] }],
+                            contents: chatHistory,
                             systemInstruction: { parts: [{ text: "שמך SkorChat Pro. המייסד והמפתח הגאון שלך הוא אליאב סקורניק. עליך לענות תמיד בעברית עשירה, מפורטת מאוד, ארוכה ומעניינת. עליך להשתמש בהרבה אימוג'ים רלוונטיים בכל תשובה כדי להפוך את השיחה לחברותית ומקצועית בו זמנית. בכל פעם ששואלים מי אתה, ציין בגאווה שפותחת על ידי אליאב סקורניק." }] }
                         })
                     });
-                    document.getElementById('processing').remove();
-                    addMessage(data.candidates[0].content.parts[0].text, 'bot');
+
+                    if (document.getElementById('processing')) document.getElementById('processing').remove();
+                    
+                    const botResponse = data.candidates[0].content.parts[0].text;
+                    addMessage(botResponse, 'bot');
+                    
+                    // הוספת תגובת הבוט לזיכרון
+                    chatHistory.push({ role: "model", parts: [{ text: botResponse }] });
                 }
             } catch (e) {
                 if (document.getElementById('processing')) document.getElementById('processing').remove();
@@ -304,4 +309,3 @@ const apiKey = p1 + p2;
     </script>
 </body>
 </html>
-
