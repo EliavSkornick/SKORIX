@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SkorChat Pro V10.0</title>
+    <title>SkorChat Pro | Eliav Skornick Edition</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
@@ -13,8 +13,6 @@
         :root {
             --eliav-green: #3b8e66;
             --zinc-950: #09090b;
-            --zinc-900: #18181b;
-            --zinc-800: #27272a;
         }
 
         body {
@@ -30,137 +28,131 @@
 
         .scrollbar-hide::-webkit-scrollbar { display: none; }
         
-        /* בועות הודעה לפי העיצוב בתמונה */
+        /* בועות הודעה בעיצוב המדויק מהתמונות */
         .bot-bubble {
-            background-color: var(--zinc-900);
-            color: #e4e4e7;
-            border-radius: 1.5rem;
-            border: 1px solid var(--zinc-800);
-            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+            background-color: #1c1c1e;
+            color: #efefef;
+            border-radius: 1.2rem;
+            border: 1px solid #2c2c2e;
         }
 
         .user-bubble {
             background-color: var(--eliav-green);
             color: white;
-            border-radius: 1.5rem;
-            box-shadow: 0 4px 15px rgba(59, 142, 102, 0.2);
+            border-radius: 1.2rem;
         }
 
-        /* עיצוב כרטיסיית התמונה */
+        /* כרטיסיית תמונה - העתק מושלם */
         .image-card {
-            background-color: #111111;
+            background-color: #111;
             border-radius: 1.5rem;
-            padding: 12px;
+            padding: 14px;
             border: 1px solid #222;
             width: 100%;
-            max-width: 400px;
+            max-width: 380px;
         }
 
-        /* שורת קלט לפי התמונה */
-        .input-container {
+        .input-bar-bg {
             background-color: #0a0a0a;
             border: 1px solid #1a1a1a;
             border-radius: 1.5rem;
-            display: flex;
-            align-items: center;
-            padding: 8px;
         }
 
         .btn-send-special {
             background-color: var(--eliav-green);
             color: #000;
-            width: 54px;
-            height: 54px;
+            width: 50px;
+            height: 50px;
             border-radius: 1rem;
             display: flex;
             align-items: center;
-            justify-center: center;
-            transition: transform 0.2s;
+            justify-content: center;
+            transition: transform 0.1s;
         }
 
-        .btn-image-special {
+        .btn-mode-special {
             background-color: #1a1a1a;
-            color: #fff;
-            width: 48px;
-            height: 48px;
+            color: #666;
+            width: 44px;
+            height: 44px;
             border-radius: 0.8rem;
             display: flex;
             align-items: center;
-            justify-center: center;
+            justify-content: center;
         }
 
-        /* אנימציות */
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
+        @keyframes popIn {
+            from { opacity: 0; transform: scale(0.96) translateY(10px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
         }
-        .animate-msg { animation: fadeIn 0.3s ease-out forwards; }
+        .animate-msg { animation: popIn 0.3s cubic-bezier(0.1, 0.8, 0.2, 1) forwards; }
 
         .processing-text {
             color: #3b8e66;
             font-weight: 700;
+            font-size: 0.9rem;
             animation: pulse 2s infinite;
         }
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
-
-        .prose p { margin-bottom: 0.5rem; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+        
+        .prose p { margin-bottom: 0.6rem; }
+        .prose p:last-child { margin-bottom: 0; }
+        .prose strong { color: #fff; font-weight: 800; }
     </style>
 </head>
 <body>
 
-    <!-- Header לפי התמונה -->
-    <header class="px-6 py-4 flex items-center justify-between border-b border-zinc-900/50 bg-black/80 backdrop-blur-md">
+    <!-- Header -->
+    <header class="px-5 py-4 flex items-center justify-between border-b border-zinc-900 bg-black/90 backdrop-blur-md z-50">
         <div class="flex items-center gap-2">
-            <span class="text-[10px] text-zinc-500 font-black uppercase tracking-widest">Cloud Connected</span>
+            <span class="text-[9px] text-zinc-500 font-bold uppercase tracking-[0.2em]">Cloud Connected</span>
             <div class="w-2 h-2 bg-emerald-500 rounded-full shadow-[0_0_8px_#10b981]"></div>
         </div>
         
-        <div class="text-left">
-            <h1 class="text-lg font-[900] italic tracking-tighter leading-none">
+        <div class="text-left flex flex-col items-end">
+            <h1 class="text-base font-black italic tracking-tighter leading-none">
                 SkorChat <span class="text-emerald-500 not-italic">Pro</span>
             </h1>
-            <p class="text-[8px] text-zinc-600 font-bold uppercase tracking-widest mt-1">
-                ELIAV SKORNICK EDITION
-            </p>
+            <p class="text-[7px] text-zinc-600 font-bold uppercase tracking-widest mt-0.5">ELIAV SKORNICK EDITION</p>
         </div>
     </header>
 
     <!-- Chat Area -->
-    <main id="chat-container" class="flex-1 overflow-y-auto p-4 space-y-6 scrollbar-hide">
-        <!-- הודעת פתיחה מהתמונה -->
-        <div class="flex justify-center animate-msg mt-4">
-            <div class="bot-bubble p-6 max-w-[90%] text-center leading-relaxed">
+    <main id="chat-container" class="flex-1 overflow-y-auto p-4 space-y-5 scrollbar-hide">
+        <!-- הודעת פתיחה -->
+        <div class="flex justify-start animate-msg">
+            <div class="bot-bubble p-5 max-w-[88%] shadow-lg leading-relaxed">
                 <p class="text-[15px]">שלום! אני **SkorChat Pro**. אני יכול לעזור לך בכל שאלה, ובנוסף ליצור תמונות מדהימות! לחץ על כפתור התמונה 🎨 כדי לעבור למצב יצירת תמונות. איך אוכל לעזור לך היום? 🚀</p>
             </div>
         </div>
     </main>
 
-    <!-- Footer -->
-    <footer class="py-2">
-        <p class="text-[9px] text-zinc-800 text-center font-bold tracking-[0.2em] uppercase">
+    <!-- Footer Branding -->
+    <footer class="py-1">
+        <p class="text-[8px] text-zinc-800 text-center font-bold tracking-[0.3em] uppercase">
             INVENTOR: ELIAV SKORNICK | SKORCHAT PRO V10.0
         </p>
     </footer>
 
     <!-- Input Section -->
-    <div class="p-4 pb-8 bg-black">
+    <div class="p-4 pb-10 bg-black">
         <div class="max-w-4xl mx-auto">
-            <div class="input-container shadow-2xl">
+            <div class="input-bar-bg flex items-center p-2 shadow-2xl">
                 
                 <!-- כפתור שלח (שמאל) -->
-                <button id="btn-send" class="btn-send-special active:scale-95">
+                <button id="btn-send" class="btn-send-special active:scale-90 shrink-0">
                     <i data-lucide="send" class="w-6 h-6 rotate-[225deg] ml-1"></i>
                 </button>
 
                 <!-- שדה טקסט -->
                 <textarea id="chat-input" rows="1" 
                     placeholder="שאל את SkorChat Pro..." 
-                    class="flex-1 bg-transparent border-none text-[16px] py-3 px-4 text-white focus:ring-0 font-medium placeholder-zinc-700 resize-none"
+                    class="flex-1 bg-transparent border-none text-[16px] py-3 px-3 text-white focus:ring-0 font-medium placeholder-zinc-700 resize-none max-h-32"
                     dir="rtl"
                 ></textarea>
 
                 <!-- כפתור תמונה (ימין) -->
-                <button id="btn-image" class="btn-image-special active:scale-95 transition-all">
+                <button id="btn-image" class="btn-mode-special active:scale-90 shrink-0 transition-all">
                     <i data-lucide="image" id="icon-mode" class="w-6 h-6"></i>
                 </button>
             </div>
@@ -168,9 +160,9 @@
     </div>
 
     <script>
-        // אליאב, שים את המפתח שקיבלת כאן כדי שזה יעבוד לנצח בחינם:
+        // אליאב, הכנס את המפתח שלך כאן כדי שזה יעבוד לנצח בחינם:
         const apiKey = ""; 
-        
+
         let isImageMode = false;
         let isThinking = false;
 
@@ -182,20 +174,16 @@
 
         lucide.createIcons();
 
-        // גדילה אוטומטית של הטקסט
         chatInput.addEventListener('input', function() {
             this.style.height = 'auto';
             this.style.height = (this.scrollHeight) + 'px';
         });
 
-        // החלפת מצב
         btnImage.addEventListener('click', () => {
             isImageMode = !isImageMode;
-            btnImage.classList.toggle('text-emerald-500', isImageMode);
-            btnImage.classList.toggle('border', isImageMode);
-            btnImage.classList.toggle('border-emerald-500/30', isImageMode);
-            
-            chatInput.placeholder = isImageMode ? "תאר את התמונה שברצונך ליצור..." : "שאל את SkorChat Pro...";
+            btnImage.style.color = isImageMode ? "var(--eliav-green)" : "#666";
+            btnImage.style.backgroundColor = isImageMode ? "#1e2a24" : "#1a1a1a";
+            chatInput.placeholder = isImageMode ? "תאר תמונה ליצירה..." : "שאל את SkorChat Pro...";
             iconMode.setAttribute('data-lucide', isImageMode ? 'sparkles' : 'image');
             lucide.createIcons();
         });
@@ -216,18 +204,14 @@
         function addMessage(text, role) {
             const wrap = document.createElement('div');
             wrap.className = `flex ${role === 'user' ? 'justify-end' : 'justify-start'} animate-msg`;
-            
             const bubble = document.createElement('div');
-            bubble.className = `${role === 'user' ? 'user-bubble' : 'bot-bubble'} p-4 max-w-[85%] text-sm shadow-xl`;
-            
+            bubble.className = `${role === 'user' ? 'user-bubble' : 'bot-bubble'} p-4 max-w-[88%] text-[15px] shadow-md`;
             const textContent = document.createElement('div');
             textContent.className = "prose rtl";
             textContent.innerHTML = marked.parse(text);
-            
             bubble.appendChild(textContent);
             wrap.appendChild(bubble);
             chatContainer.appendChild(wrap);
-            
             chatContainer.scrollTo({ top: chatContainer.scrollHeight, behavior: 'smooth' });
         }
 
@@ -235,21 +219,19 @@
             const url = `data:image/png;base64,${b64}`;
             const wrap = document.createElement('div');
             wrap.className = `flex justify-start animate-msg`;
-            
             wrap.innerHTML = `
                 <div class="image-card shadow-2xl">
-                    <img src="${url}" class="w-full aspect-square object-cover rounded-xl mb-4" />
-                    <div class="flex items-center justify-between px-1">
-                        <button onclick="downloadImg('${url}')" class="flex items-center gap-2 bg-[#1e2a24] text-[#3b8e66] px-5 py-2.5 rounded-xl text-xs font-bold active:scale-95 transition-all">
+                    <img src="${url}" class="w-full aspect-square object-cover rounded-xl mb-4 shadow-inner" />
+                    <div class="flex items-center justify-between mb-3 px-1">
+                        <button onclick="downloadImg('${url}')" class="flex items-center gap-2 bg-[#1e2a24] text-[#3b8e66] px-4 py-2 rounded-lg text-xs font-bold active:scale-95 transition-all">
                             <i data-lucide="download" class="w-4 h-4"></i>
                             הורדה
                         </button>
-                        <span class="text-[10px] text-zinc-700 font-bold uppercase">נוצר ע"י SkorChat Pro</span>
+                        <span class="text-[10px] text-zinc-600 font-bold uppercase tracking-wider">SKORCHAT PRO</span>
                     </div>
-                    <p class="text-center text-white/90 font-medium text-[15px] mt-5 mb-2">✨ הנה התמונה שיצרתי עבורך! ✨</p>
+                    <p class="text-right text-white/90 text-[14px] font-bold">✨ הנה התמונה שיצרתי עבורך! ✨</p>
                 </div>
             `;
-            
             chatContainer.appendChild(wrap);
             lucide.createIcons();
             chatContainer.scrollTo({ top: chatContainer.scrollHeight, behavior: 'smooth' });
@@ -258,15 +240,15 @@
         function downloadImg(url) {
             const a = document.createElement('a');
             a.href = url;
-            a.download = `SkorChat_Pro_Image_${Date.now()}.png`;
+            a.download = `SkorChat_Pro_${Date.now()}.png`;
             a.click();
         }
 
         function showProcessing() {
             const div = document.createElement('div');
             div.id = 'processing';
-            div.className = 'flex justify-center py-4 animate-msg';
-            div.innerHTML = `<p class="processing-text text-sm">Skor Intelligence מעבד נתונים...</p>`;
+            div.className = 'flex justify-start py-2 px-1 animate-msg';
+            div.innerHTML = `<p class="processing-text">Skor Intelligence מעבד נתונים...</p>`;
             chatContainer.appendChild(div);
             chatContainer.scrollTo({ top: chatContainer.scrollHeight, behavior: 'smooth' });
         }
@@ -279,7 +261,6 @@
             addMessage(p, 'user');
             chatInput.value = '';
             chatInput.style.height = 'auto';
-            
             showProcessing();
 
             try {
@@ -299,7 +280,7 @@
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                             contents: [{ parts: [{ text: p }] }],
-                            systemInstruction: { parts: [{ text: "שמך SkorChat Pro. המייסד הוא אליאב סקורניק. ענה בעברית מפורטת, חכמה, ארוכה ומלאה באימוג'ים." }] }
+                            systemInstruction: { parts: [{ text: "שמך SkorChat Pro. המייסד והמפתח הגאון שלך הוא אליאב סקורניק. עליך לענות תמיד בעברית עשירה, מפורטת מאוד, ארוכה ומעניינת. עליך להשתמש בהרבה אימוג'ים רלוונטיים בכל תשובה כדי להפוך את השיחה לחברותית ומקצועית בו זמנית. בכל פעם ששואלים מי אתה, ציין בגאווה שפותחת על ידי אליאב סקורניק." }] }
                         })
                     });
                     document.getElementById('processing').remove();
@@ -307,7 +288,7 @@
                 }
             } catch (e) {
                 if (document.getElementById('processing')) document.getElementById('processing').remove();
-                addMessage("אליאב, יש לי שגיאה בחיבור. וודא שהכנסת מפתח API תקין.", 'bot');
+                addMessage("אליאב המייסד, יש לי שגיאה בחיבור למעבד הנתונים. וודא שהמפתח תקין. ⚠️", 'bot');
             } finally {
                 isThinking = false;
             }
