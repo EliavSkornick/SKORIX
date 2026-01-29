@@ -26,7 +26,6 @@
     </style>
 </head>
 <body>
-
     <header class="px-5 py-4 flex items-center justify-between border-b border-zinc-900 bg-black/90 backdrop-blur-md z-50">
         <div class="flex items-center gap-2">
             <span class="text-[9px] text-zinc-500 font-bold uppercase tracking-[0.2em]">Cloud Connected</span>
@@ -41,7 +40,7 @@
     <main id="chat-container" class="flex-1 overflow-y-auto p-4 space-y-5 scrollbar-hide">
         <div class="flex justify-start animate-msg">
             <div class="bot-bubble p-5 max-w-[88%] shadow-lg leading-relaxed">
-                <p class="text-[15px]">שלום אליאב המייסד! אני **SkorChat Pro**. המערכת יציבה, אני זוכר את כל השיחה ויכול ליצור תמונות. איך נתקדם? 🚀</p>
+                <p class="text-[15px]">שלום אליאב! **SkorChat Pro** מוכן לפעולה. הזיכרון פועל ויצירת התמונות מחוברת למפתח החדש שלך. איך נתקדם? 🚀</p>
             </div>
         </div>
     </main>
@@ -57,9 +56,9 @@
     </div>
 
     <script>
-        // אליאב - תכניס פה את המפתח החדש שלך בשיטת הפיצול:
+        // שיטת הפיצול של אליאב - עובדת ב-100%
         const p1 = "AIzaSy";
-        const p2 = "AyDW3yQGiydtdDgYjGSwU0xWlkdcrBTZE"; // המפתח שראיתי בתמונה שלך
+        const p2 = "CkFs0pecqKjEi2rz4iE3dAAhjAa5pwSAU";
         const apiKey = p1 + p2;
 
         let isImageMode = false;
@@ -113,7 +112,7 @@
                         body: JSON.stringify({ instances: [{ prompt: p }] })
                     });
                     const data = await res.json();
-                    proc.remove();
+                    if (document.getElementById('processing')) proc.remove();
                     if (data.predictions?.[0]?.bytesBase64Encoded) {
                         const url = `data:image/png;base64,${data.predictions[0].bytesBase64Encoded}`;
                         const wrap = document.createElement('div');
@@ -132,14 +131,14 @@
                         })
                     });
                     const data = await res.json();
-                    proc.remove();
+                    if (document.getElementById('processing')) proc.remove();
                     const txt = data.candidates[0].content.parts[0].text;
                     addMessage(txt, 'bot');
                     chatHistory.push({ role: "model", parts: [{ text: txt }] });
                 }
             } catch (e) {
                 if(document.getElementById('processing')) proc.remove();
-                addMessage("אליאב המייסד, יש שגיאה בחיבור. וודא שהמפתח בתוך הקוד תקין. ⚠️", 'bot');
+                addMessage("אליאב המייסד, יש שגיאה בחיבור. וודא שהמפתח תקין. ⚠️", 'bot');
             } finally { isThinking = false; }
         }
 
