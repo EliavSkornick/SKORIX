@@ -42,7 +42,7 @@
     <main id="chat-container" class="flex-1 overflow-y-auto p-4 space-y-5 scrollbar-hide">
         <div class="flex justify-start animate-msg">
             <div class="bot-bubble p-5 max-w-[88%] shadow-lg leading-relaxed">
-                <p class="text-[15px]">שלום! אני **SkorChat Pro**. אני זוכר את כל השיחה שלנו ויכול ליצור תמונות! לחץ על 🎨 למעבר למצב יצירה. איך אליאב המייסד יכול להיעזר בי היום? 🚀</p>
+                <p class="text-[15px]">שלום אליאב! אני **SkorChat Pro**. המוח שלי מעודכן ומחובר לענן. אני זוכר הכל ויכול ליצור תמונות. איך נתקדם היום? 🚀</p>
             </div>
         </div>
     </main>
@@ -62,10 +62,8 @@
     </div>
 
     <script>
-        
-        const p1 = "AIzaSy";
-        const p2 = "BdBmElK3N-uCk61kBQ2QQxZwrpAuBD3WA"; 
-        const apiKey = p1 + p2;
+        // שימוש במשתנה סביבה כדי למנוע חסימה ב-GitHub
+        const apiKey = "process.env.NEXT_PUBLIC_GOOGLE_API_KEY";
 
         let isImageMode = false;
         let isThinking = false;
@@ -106,13 +104,13 @@
             const url = `data:image/png;base64,${b64}`;
             const wrap = document.createElement('div');
             wrap.className = `flex justify-start animate-msg`;
-            wrap.innerHTML = `<div class="image-card shadow-2xl"><img src="${url}" class="w-full aspect-square object-cover rounded-xl mb-4 shadow-inner" /><div class="flex items-center justify-between mb-3 px-1"><button onclick="downloadImg('${url}')" class="flex items-center gap-2 bg-[#1e2a24] text-[#3b8e66] px-4 py-2 rounded-lg text-xs font-bold active:scale-95 transition-all"><i data-lucide="download" class="w-4 h-4"></i>הורדה</button><span class="text-[10px] text-zinc-600 font-bold uppercase tracking-wider">SKORCHAT PRO</span></div><p class="text-right text-white/90 text-[14px] font-bold">✨ הנה התמונה שיצרתי עבורך אליאב! ✨</p></div>`;
+            wrap.innerHTML = `<div class="image-card shadow-2xl"><img src="${url}" class="w-full aspect-square object-cover rounded-xl mb-4 shadow-inner" /><div class="flex items-center justify-between mb-3 px-1"><button onclick="downloadImg('${url}')" class="flex items-center gap-2 bg-[#1e2a24] text-[#3b8e66] px-4 py-2 rounded-lg text-xs font-bold active:scale-95 transition-all"><i data-lucide="download" class="w-4 h-4"></i>הורדה</button><span class="text-[10px] text-zinc-600 font-bold uppercase tracking-wider">SKORCHAT PRO</span></div><p class="text-right text-white/90 text-[14px] font-bold">✨ יצירה בלעדית עבור אליאב! ✨</p></div>`;
             chatContainer.appendChild(wrap);
             lucide.createIcons();
             chatContainer.scrollTo({ top: chatContainer.scrollHeight, behavior: 'smooth' });
         }
 
-        function downloadImg(url) { const a = document.createElement('a'); a.href = url; a.download = `Skor_Image_${Date.now()}.png`; a.click(); }
+        function downloadImg(url) { const a = document.createElement('a'); a.href = url; a.download = `Skor_Image.png`; a.click(); }
 
         async function handleAction() {
             const p = chatInput.value.trim();
@@ -145,7 +143,7 @@
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                             contents: chatHistory,
-                            systemInstruction: { parts: [{ text: "שמך SkorChat Pro. פותחת על ידי אליאב סקורניק הגאון. ענה בעברית עשירה עם הרבה אימוג'ים. ציין תמיד שאתה גאה להיות חלק מהמותג Skor." }] }
+                            systemInstruction: { parts: [{ text: "שמך SkorChat Pro. נוצרת על ידי אליאב סקורניק. ענה בעברית, השתמש בהרבה אימוג'ים, והיה מפורט וחכם." }] }
                         })
                     });
                     const data = await response.json();
@@ -156,7 +154,7 @@
                 }
             } catch (e) {
                 if(document.getElementById('processing')) proc.remove();
-                addMessage("אליאב המייסד, יש לי שגיאה בחיבור למעבד הנתונים. וודא שהמפתח תקין. ⚠️", 'bot');
+                addMessage("שגיאה בחיבור. אליאב, וודא שהמפתח ב-Vercel הוגדר נכון. ⚠️", 'bot');
             } finally { isThinking = false; }
         }
 
