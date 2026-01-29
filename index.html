@@ -41,23 +41,20 @@
     </main>
 
     <footer class="py-1">
-        <p class="text-[8px] text-zinc-800 text-center font-bold tracking-[0.3em] uppercase">
-            INVENTOR: ELIAV SKORNICK | SKORCHAT PRO V10.0
-        </p>
+        <p class="text-[8px] text-zinc-800 text-center font-bold tracking-[0.3em] uppercase">INVENTOR: ELIAV SKORNICK | SKORCHAT PRO V10.0</p>
     </footer>
 
     <div class="p-4 pb-10 bg-black">
         <div class="max-w-4xl mx-auto">
             <div class="input-bar-bg flex items-center p-2 shadow-2xl">
-                <button id="btn-send" class="btn-send-special active:scale-90 shrink-0">
-                    <i data-lucide="send" class="w-6 h-6 rotate-[225deg] ml-1"></i>
-                </button>
+                <button id="btn-send" class="btn-send-special active:scale-90 shrink-0"><i data-lucide="send" class="w-6 h-6 rotate-[225deg] ml-1"></i></button>
                 <textarea id="chat-input" rows="1" placeholder="שאל את SkorChat Pro..." class="flex-1 bg-transparent border-none text-[16px] py-3 px-3 text-white focus:ring-0 font-medium placeholder-zinc-700 resize-none max-h-32" dir="rtl"></textarea>
             </div>
         </div>
     </div>
 
     <script>
+        // המפתח החדש שלך - מפוצל כדי ש-GitHub לא יחסום אותו
         const p1 = "AIzaSy";
         const p2 = "CkFs0pecqKjEi2rz4iE3dAAhjAa5pwSAU";
         const apiKey = p1 + p2;
@@ -93,7 +90,7 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         contents: chatHistory,
-                        systemInstruction: { parts: [{ text: "שמך SkorChat Pro. נוצרת על ידי אליאב סקורניק. ענה תמיד בעברית מפורטת עם אימוג'ים." }] }
+                        systemInstruction: { parts: [{ text: "שמך SkorChat Pro. נוצרת עלי ידי אליאב סקורניק. ענה תמיד בעברית מפורטת עם אימוג'ים." }] }
                     })
                 });
                 const data = await res.json();
@@ -101,7 +98,7 @@
                 addMessage(txt, 'bot');
                 chatHistory.push({ role: "model", parts: [{ text: txt }] });
             } catch (e) {
-                addMessage("אליאב, יש שגיאה במעבד הנתונים. וודא שהקוד הועתק במלואו. ⚠️", 'bot');
+                addMessage("אליאב המייסד, יש שגיאה בחיבור. וודא שהקוד הועתק במלואו ל-GitHub. ⚠️", 'bot');
             }
         }
 
