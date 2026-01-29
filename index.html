@@ -14,15 +14,14 @@
         .scrollbar-hide::-webkit-scrollbar { display: none; }
         .bot-bubble { background-color: #1c1c1e; color: #efefef; border-radius: 1.2rem; border: 1px solid #2c2c2e; }
         .user-bubble { background-color: var(--eliav-green); color: white; border-radius: 1.2rem; }
-        .image-card { background-color: #111; border-radius: 1.5rem; padding: 14px; border: 1px solid #222; width: 100%; max-width: 380px; }
         .input-bar-bg { background-color: #0a0a0a; border: 1px solid #1a1a1a; border-radius: 1.5rem; }
         .btn-send-special { background-color: var(--eliav-green); color: #000; width: 50px; height: 50px; border-radius: 1rem; display: flex; align-items: center; justify-content: center; }
-        .btn-mode-special { background-color: #1a1a1a; color: #666; width: 44px; height: 44px; border-radius: 0.8rem; display: flex; align-items: center; justify-content: center; }
         .animate-msg { animation: popIn 0.3s cubic-bezier(0.1, 0.8, 0.2, 1) forwards; }
         @keyframes popIn { from { opacity: 0; transform: scale(0.96) translateY(10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
         .processing-text { color: #3b8e66; font-weight: 700; font-size: 0.9rem; animation: pulse 2s infinite; }
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
         .prose p { margin-bottom: 0.6rem; }
+        .prose strong { color: #fff; font-weight: 800; }
     </style>
 </head>
 <body>
@@ -54,36 +53,23 @@
             <div class="input-bar-bg flex items-center p-2 shadow-2xl">
                 <button id="btn-send" class="btn-send-special active:scale-90 shrink-0"><i data-lucide="send" class="w-6 h-6 rotate-[225deg] ml-1"></i></button>
                 <textarea id="chat-input" rows="1" placeholder="שאל את SkorChat Pro..." class="flex-1 bg-transparent border-none text-[16px] py-3 px-3 text-white focus:ring-0 font-medium placeholder-zinc-700 resize-none max-h-32" dir="rtl"></textarea>
-                <button id="btn-image" class="btn-mode-special active:scale-90 shrink-0 transition-all"><i data-lucide="image" id="icon-mode" class="w-6 h-6"></i></button>
             </div>
         </div>
     </div>
 
     <script>
-        // המפתח החדש שלך - מפוצל כדי לעקוף את GitHub ולעבוד ב-100%
         const p1 = "AIzaSy";
-        const p2 = "DkdiKn1n_xUOcNOWWiw-yvS24PWD0jjnQ"; // המפתח שעובד לך עכשיו
+        const p2 = "DkdiKn1n_xUOcNOWWiw-yvS24PWD0jjnQ"; 
         const apiKey = p1 + p2;
 
-        let isImageMode = false;
         let isThinking = false;
         let chatHistory = []; 
 
         const chatContainer = document.getElementById('chat-container');
         const chatInput = document.getElementById('chat-input');
         const btnSend = document.getElementById('btn-send');
-        const btnImage = document.getElementById('btn-image');
-        const iconMode = document.getElementById('icon-mode');
 
         lucide.createIcons();
-
-        btnImage.addEventListener('click', () => {
-            isImageMode = !isImageMode;
-            btnImage.style.color = isImageMode ? "var(--eliav-green)" : "#666";
-            btnImage.style.backgroundColor = isImageMode ? "#1e2a24" : "#1a1a1a";
-            iconMode.setAttribute('data-lucide', isImageMode ? 'sparkles' : 'image');
-            lucide.createIcons();
-        });
 
         function addMessage(text, role) {
             const wrap = document.createElement('div');
@@ -92,15 +78,6 @@
             bubble.className = `${role === 'user' ? 'user-bubble' : 'bot-bubble'} p-4 max-w-[88%] text-[15px] shadow-md`;
             bubble.innerHTML = `<div class="prose rtl">${marked.parse(text)}</div>`;
             wrap.appendChild(bubble);
-            chatContainer.appendChild(wrap);
-            chatContainer.scrollTo({ top: chatContainer.scrollHeight, behavior: 'smooth' });
-        }
-
-        function addImageCard(b64) {
-            const url = `data:image/png;base64,${b64}`;
-            const wrap = document.createElement('div');
-            wrap.className = `flex justify-start animate-msg`;
-            wrap.innerHTML = `<div class="image-card shadow-2xl"><img src="${url}" class="w-full aspect-square object-cover rounded-xl mb-4" /><p class="text-right text-white/90 text-[14px] font-bold">✨ יצירה עבור אליאב המייסד! ✨</p></div>`;
             chatContainer.appendChild(wrap);
             chatContainer.scrollTo({ top: chatContainer.scrollHeight, behavior: 'smooth' });
         }
@@ -119,35 +96,28 @@
             chatContainer.appendChild(proc);
 
             try {
-                if (isImageMode) {
-                    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-001:predict?key=${apiKey}`, {
-                        method: 'POST',
-                        body: JSON.stringify({ instances: [{ prompt: p }] })
-                    });
-                    const data = await res.json();
-                    proc.remove();
-                    if (data.predictions?.[0]?.bytesBase64Encoded) addImageCard(data.predictions[0].bytesBase64Encoded);
-                    else throw new Error("שגיאה ביצירת תמונה. נסה שוב או עבור למצב שיחה.");
-                } else {
-                    chatHistory.push({ role: "user", parts: [{ text: p }] });
-                    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            contents: chatHistory,
-                            systemInstruction: { parts: [{ text: "שמך SkorChat Pro. נוצרת על ידי אליאב סקורניק. ענה תמיד בעברית עשירה, מפורטת מאוד, ארוכה ומעניינת. השתמש בהרבה אימוג'ים רלוונטיים בכל תשובה." }] }
-                        })
-                    });
-                    const data = await res.json();
-                    proc.remove();
+                chatHistory.push({ role: "user", parts: [{ text: p }] });
+                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: chatHistory,
+                        systemInstruction: { parts: [{ text: "שמך SkorChat Pro. נוצרת על ידי אליאב סקורניק. ענה תמיד בעברית מפורטת, עשירה, ארוכה ומעניינת עם המון אימוג'ים." }] }
+                    })
+                });
+                const data = await res.json();
+                if (document.getElementById('processing')) proc.remove();
+                
+                if (data.candidates && data.candidates[0]) {
                     const txt = data.candidates[0].content.parts[0].text;
                     addMessage(txt, 'bot');
                     chatHistory.push({ role: "model", parts: [{ text: txt }] });
+                } else {
+                    throw new Error();
                 }
             } catch (e) {
                 if(document.getElementById('processing')) proc.remove();
-                console.error("שגיאה ב-API:", e); // לוג פנימי לניפוי באגים
-                addMessage("אליאב המייסד, יש שגיאה בחיבור או בעיבוד. וודא שהמפתח תקין ושאין הגבלות. ⚠️", 'bot');
+                addMessage("אליאב המייסד, יש שגיאה בחיבור. וודא שהמפתח ב-AI Studio פעיל ושלא עברת את המכסה. ⚠️", 'bot');
             } finally { isThinking = false; }
         }
 
