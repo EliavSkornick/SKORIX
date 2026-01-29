@@ -9,214 +9,108 @@
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;600;700;800&display=swap');
-        
-        :root {
-            --eliav-green: #3b8e66;
-        }
-
-        body {
-            font-family: 'Assistant', sans-serif;
-            background-color: #000;
-            color: #fff;
-            margin: 0;
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
-            overflow: hidden;
-        }
-
+        :root { --eliav-green: #3b8e66; }
+        body { font-family: 'Assistant', sans-serif; background-color: #000; color: #fff; margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
         .scrollbar-hide::-webkit-scrollbar { display: none; }
-        
-        /* בועות הודעה */
-        .bot-bubble {
-            background-color: #1c1c1e;
-            color: #efefef;
-            border-radius: 1.2rem;
-            border: 1px solid #2c2c2e;
-        }
-
-        .user-bubble {
-            background-color: var(--eliav-green);
-            color: white;
-            border-radius: 1.2rem;
-        }
-
-        /* כרטיסיית תמונה */
-        .image-card {
-            background-color: #111;
-            border-radius: 1.5rem;
-            padding: 14px;
-            border: 1px solid #222;
-            width: 100%;
-            max-width: 380px;
-        }
-
-        .input-bar-bg {
-            background-color: #0a0a0a;
-            border: 1px solid #1a1a1a;
-            border-radius: 1.5rem;
-        }
-
-        .btn-send-special {
-            background-color: var(--eliav-green);
-            color: #000;
-            width: 50px;
-            height: 50px;
-            border-radius: 1rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-        }
-
-        .btn-mode-special {
-            background-color: #1a1a1a;
-            color: #666;
-            width: 44px;
-            height: 44px;
-            border-radius: 0.8rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        @keyframes popIn {
-            from { opacity: 0; transform: scale(0.96) translateY(10px); }
-            to { opacity: 1; transform: scale(1) translateY(0); }
-        }
+        .bot-bubble { background-color: #1c1c1e; color: #efefef; border-radius: 1.2rem; border: 1px solid #2c2c2e; }
+        .user-bubble { background-color: var(--eliav-green); color: white; border-radius: 1.2rem; }
+        .image-card { background-color: #111; border-radius: 1.5rem; padding: 14px; border: 1px solid #222; width: 100%; max-width: 380px; }
+        .input-bar-bg { background-color: #0a0a0a; border: 1px solid #1a1a1a; border-radius: 1.5rem; }
+        .btn-send-special { background-color: var(--eliav-green); color: #000; width: 50px; height: 50px; border-radius: 1rem; display: flex; align-items: center; justify-content: center; }
+        .btn-mode-special { background-color: #1a1a1a; color: #666; width: 44px; height: 44px; border-radius: 0.8rem; display: flex; align-items: center; justify-content: center; }
+        @keyframes popIn { from { opacity: 0; transform: scale(0.96) translateY(10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
         .animate-msg { animation: popIn 0.3s cubic-bezier(0.1, 0.8, 0.2, 1) forwards; }
-
-        .processing-text {
-            color: #3b8e66;
-            font-weight: 700;
-            font-size: 0.9rem;
-            animation: pulse 2s infinite;
-        }
+        .processing-text { color: #3b8e66; font-weight: 700; font-size: 0.9rem; animation: pulse 2s infinite; }
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
-        
         .prose p { margin-bottom: 0.6rem; }
         .prose strong { color: #fff; font-weight: 800; }
     </style>
 </head>
 <body>
 
-    <!-- Header -->
     <header class="px-5 py-4 flex items-center justify-between border-b border-zinc-900 bg-black/90 backdrop-blur-md z-50">
         <div class="flex items-center gap-2">
-            <span class="text-[9px] text-zinc-500 font-bold uppercase tracking-[0.2em]">Cloud Connected</span>
+            <span class="text-[9px] text-zinc-500 font-bold uppercase tracking-[0.2em]">Live System</span>
             <div class="w-2 h-2 bg-emerald-500 rounded-full shadow-[0_0_8px_#10b981]"></div>
         </div>
-        
         <div class="text-left flex flex-col items-end">
-            <h1 class="text-base font-black italic tracking-tighter leading-none">
-                SkorChat <span class="text-emerald-500 not-italic">Pro</span>
-            </h1>
+            <h1 class="text-base font-black italic tracking-tighter leading-none">SkorChat <span class="text-emerald-500 not-italic">Pro</span></h1>
             <p class="text-[7px] text-zinc-600 font-bold uppercase tracking-widest mt-0.5">ELIAV SKORNICK EDITION</p>
         </div>
     </header>
 
-    <!-- Chat Area -->
-    <main id="chat-container" class="flex-1 overflow-y-auto p-4 space-y-5 scrollbar-hide">
-        <div class="flex justify-start animate-msg">
-            <div class="bot-bubble p-5 max-w-[88%] shadow-lg leading-relaxed">
-                <p class="text-[15px]">שלום! אני **SkorChat Pro**. אני יכול לעזור לך בכל שאלה, ובנוסף ליצור תמונות מדהימות! לחץ על כפתור התמונה 🎨 כדי לעבור למצב יצירת תמונות. איך אוכל לעזור לך היום? 🚀</p>
-            </div>
-        </div>
-    </main>
+    <main id="chat-container" class="flex-1 overflow-y-auto p-4 space-y-5 scrollbar-hide"></main>
 
-    <!-- Footer -->
-    <footer class="py-1">
-        <p class="text-[8px] text-zinc-800 text-center font-bold tracking-[0.3em] uppercase">
-            INVENTOR: ELIAV SKORNICK | SKORCHAT PRO V10.0
-        </p>
+    <footer class="py-1 flex justify-center gap-4">
+        <p class="text-[8px] text-zinc-800 font-bold tracking-[0.3em] uppercase">INVENTOR: ELIAV SKORNICK</p>
     </footer>
 
-    <!-- Input Section -->
     <div class="p-4 pb-10 bg-black">
         <div class="max-w-4xl mx-auto">
-            <div class="input-bar-bg flex items-center p-2 shadow-2xl">
-                <!-- כפתור שלח -->
-                <div id="btn-send" class="btn-send-special active:scale-90 shrink-0">
+            <div class="input-bar-bg flex items-center p-2 shadow-2xl gap-2">
+                <button id="btn-send" class="btn-send-special active:scale-90 shrink-0">
                     <i data-lucide="send" class="w-6 h-6 rotate-[225deg] ml-1"></i>
-                </div>
-
-                <!-- שדה טקסט -->
-                <textarea id="chat-input" rows="1" placeholder="שאל את SkorChat Pro..." class="flex-1 bg-transparent border-none text-[16px] py-3 px-3 text-white focus:ring-0 font-medium placeholder-zinc-700 resize-none max-h-32" dir="rtl"></textarea>
-
-                <!-- כפתור מצב תמונה -->
-                <div id="btn-image" class="btn-mode-special active:scale-90 shrink-0 transition-all cursor-pointer">
+                </button>
+                <textarea id="chat-input" rows="1" placeholder="שאל את המוח של Skor..." class="flex-1 bg-transparent border-none text-[16px] py-3 px-3 text-white focus:ring-0 font-medium placeholder-zinc-700 resize-none max-h-32" dir="rtl"></textarea>
+                <button id="btn-clear" class="btn-mode-special text-red-900/40 hover:text-red-500 active:scale-90 transition-all">
+                    <i data-lucide="trash-2" class="w-5 h-5"></i>
+                </button>
+                <button id="btn-image" class="btn-mode-special active:scale-90 shrink-0 transition-all">
                     <i data-lucide="image" id="icon-mode" class="w-6 h-6"></i>
-                </div>
+                </button>
             </div>
         </div>
     </div>
 
     <script>
-        // אליאב המייסד, אם תשים את המפתח כאן פעם אחת, הוא יפסיק לשאול אותך.
-        let apiKey = ""; 
-
+        const API_KEY = "AIzaSyDhtQbTSzjMoiKmqTxqakKjrod-6vur9sA"; // המפתח שלך מוטמע כאן
         let isImageMode = false;
         let isThinking = false;
+        let chatHistory = JSON.parse(localStorage.getItem('skor_history')) || [];
 
         const chatContainer = document.getElementById('chat-container');
         const chatInput = document.getElementById('chat-input');
         const btnSend = document.getElementById('btn-send');
         const btnImage = document.getElementById('btn-image');
+        const btnClear = document.getElementById('btn-clear');
         const iconMode = document.getElementById('icon-mode');
 
-        // טעינת אייקונים ראשונית
         lucide.createIcons();
 
-        // פונקציה להשגת המפתח
-        function ensureApiKey() {
-            if (apiKey) return true;
-            const stored = localStorage.getItem('skor_api_key');
-            if (stored) {
-                apiKey = stored;
-                return true;
+        window.onload = () => {
+            if (chatHistory.length === 0) {
+                addMessage("שלום אליאב המייסד! **SkorChat Pro** מוכן לפעולה. המוח שלי מעודכן ומחובר. מה נבנה היום? 🚀", 'bot', false);
+            } else {
+                chatHistory.forEach(msg => renderMessage(msg.text, msg.role, false));
             }
-            const userKey = prompt("אליאב המייסד, נא להזין מפתח API כדי להפעיל את המוח של SkorChat Pro:");
-            if (userKey) {
-                apiKey = userKey;
-                localStorage.setItem('skor_api_key', userKey);
-                return true;
-            }
-            return false;
-        }
+        };
 
-        // שינוי גובה טקסט אוטומטי
         chatInput.addEventListener('input', function() {
             this.style.height = 'auto';
             this.style.height = (this.scrollHeight) + 'px';
         });
 
-        // כפתור מצב תמונה
-        btnImage.onclick = () => {
+        btnImage.addEventListener('click', () => {
             isImageMode = !isImageMode;
             btnImage.style.color = isImageMode ? "var(--eliav-green)" : "#666";
             btnImage.style.backgroundColor = isImageMode ? "#1e2a24" : "#1a1a1a";
-            chatInput.placeholder = isImageMode ? "תאר תמונה ליצירה..." : "שאל את SkorChat Pro...";
+            chatInput.placeholder = isImageMode ? "תאר תמונה בפרטי פרטים..." : "שאל את המוח של Skor...";
             iconMode.setAttribute('data-lucide', isImageMode ? 'sparkles' : 'image');
             lucide.createIcons();
-        };
+        });
 
-        // פונקציית Fetch עם ניסיונות חוזרים
-        async function fetchWithRetry(url, options, retries = 5) {
-            for (let i = 0; i < retries; i++) {
-                try {
-                    const res = await fetch(url, options);
-                    if (res.ok) return await res.json();
-                    await new Promise(r => setTimeout(r, Math.pow(2, i) * 1000));
-                } catch (e) {
-                    if (i === retries - 1) throw e;
-                    await new Promise(r => setTimeout(r, Math.pow(2, i) * 1000));
-                }
+        btnClear.addEventListener('click', () => {
+            if(confirm("למחוק את כל היסטוריית השיחה?")) {
+                chatHistory = [];
+                localStorage.removeItem('skor_history');
+                chatContainer.innerHTML = '';
+                addMessage("השיחה נמחקה. מוכן להתחלה חדשה, אליאב. ⚡", 'bot', false);
             }
-        }
+        });
 
-        function addMessage(text, role) {
+        function renderMessage(text, role, animate = true) {
             const wrap = document.createElement('div');
-            wrap.className = `flex ${role === 'user' ? 'justify-end' : 'justify-start'} animate-msg`;
+            wrap.className = `flex ${role === 'user' ? 'justify-end' : 'justify-start'} ${animate ? 'animate-msg' : ''}`;
             const bubble = document.createElement('div');
             bubble.className = `${role === 'user' ? 'user-bubble' : 'bot-bubble'} p-4 max-w-[88%] text-[15px] shadow-md`;
             const textContent = document.createElement('div');
@@ -228,94 +122,79 @@
             chatContainer.scrollTo({ top: chatContainer.scrollHeight, behavior: 'smooth' });
         }
 
+        function addMessage(text, role, save = true) {
+            renderMessage(text, role);
+            if (save) {
+                chatHistory.push({ text, role });
+                localStorage.setItem('skor_history', JSON.stringify(chatHistory));
+            }
+        }
+
         function addImageCard(b64) {
             const url = `data:image/png;base64,${b64}`;
             const wrap = document.createElement('div');
             wrap.className = `flex justify-start animate-msg`;
             wrap.innerHTML = `
                 <div class="image-card shadow-2xl">
-                    <img src="${url}" class="w-full aspect-square object-cover rounded-xl mb-4 shadow-inner" />
-                    <div class="flex items-center justify-between mb-3 px-1">
-                        <button onclick="downloadImg('${url}')" class="flex items-center gap-2 bg-[#1e2a24] text-[#3b8e66] px-4 py-2 rounded-lg text-xs font-bold active:scale-95 transition-all">
-                            <i data-lucide="download" class="w-4 h-4"></i>
-                            הורדה
-                        </button>
-                        <span class="text-[10px] text-zinc-600 font-bold uppercase tracking-wider">SKORCHAT PRO</span>
-                    </div>
-                    <p class="text-right text-white/90 text-[14px] font-bold">✨ הנה התמונה שיצרתי עבורך! ✨</p>
+                    <img src="${url}" class="w-full aspect-square object-cover rounded-xl mb-4" />
+                    <button onclick="downloadImg('${url}')" class="w-full bg-[#1e2a24] text-[#3b8e66] py-3 rounded-lg text-xs font-bold active:scale-95 transition-all">הורד יצירה</button>
                 </div>
             `;
             chatContainer.appendChild(wrap);
-            lucide.createIcons();
             chatContainer.scrollTo({ top: chatContainer.scrollHeight, behavior: 'smooth' });
         }
 
         function downloadImg(url) {
-            const a = document.createElement('a'); a.href = url; a.download = `SkorChat_Pro_${Date.now()}.png`; a.click();
-        }
-
-        function showProcessing() {
-            const div = document.createElement('div');
-            div.id = 'processing';
-            div.className = 'flex justify-start py-2 px-1 animate-msg';
-            div.innerHTML = `<p class="processing-text">Skor Intelligence מעבד נתונים...</p>`;
-            chatContainer.appendChild(div);
-            chatContainer.scrollTo({ top: chatContainer.scrollHeight, behavior: 'smooth' });
+            const a = document.createElement('a'); a.href = url; a.download = `Skor_Gen_${Date.now()}.png`; a.click();
         }
 
         async function handleAction() {
             const p = chatInput.value.trim();
             if (!p || isThinking) return;
-            
-            // וידוא מפתח
-            if (!ensureApiKey()) return;
-
             isThinking = true;
             addMessage(p, 'user');
             chatInput.value = '';
             chatInput.style.height = 'auto';
-            showProcessing();
+            
+            const proc = document.createElement('div');
+            proc.id = 'processing';
+            proc.className = 'flex justify-start py-2 px-1';
+            proc.innerHTML = `<p class="processing-text">Skor AI מעבד...</p>`;
+            chatContainer.appendChild(proc);
 
             try {
                 if (isImageMode) {
-                    const data = await fetchWithRetry(`https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict?key=${apiKey}`, {
+                    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-001:predict?key=${API_KEY}`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ instances: [{ prompt: p }], parameters: { sampleCount: 1 } })
                     });
+                    const data = await res.json();
                     document.getElementById('processing').remove();
                     if (data.predictions?.[0]?.bytesBase64Encoded) {
                         addImageCard(data.predictions[0].bytesBase64Encoded);
                     } else throw new Error();
                 } else {
-                    const data = await fetchWithRetry(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
+                    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                             contents: [{ parts: [{ text: p }] }],
-                            systemInstruction: { parts: [{ text: "שמך SkorChat Pro. המייסד והמפתח הגאון שלך הוא אליאב סקורניק. עליך לענות תמיד בעברית עשירה, מפורטת מאוד, ארוכה ומעניינת. עליך להשתמש בהרבה אימוג'ים רלוונטיים בכל תשובה. פנה לאליאב בשמו מדי פעם והיה שותף פעיל לשיחה." }] }
+                            systemInstruction: { parts: [{ text: "שמך SkorChat Pro. נוצרת על ידי אליאב סקורניק הגאון. עליך לענות בעברית עשירה, ארוכה, מפורטת ומלאה באימוג'ים. תן תחושה של יוקרה ובינה מלאכותית מתקדמת." }] }
                         })
                     });
+                    const data = await res.json();
                     document.getElementById('processing').remove();
                     addMessage(data.candidates[0].content.parts[0].text, 'bot');
                 }
             } catch (e) {
                 if (document.getElementById('processing')) document.getElementById('processing').remove();
-                addMessage("אליאב המייסד, יש לי שגיאה בחיבור למעבד הנתונים. וודא שהמפתח תקין. ⚠️", 'bot');
-            } finally {
-                isThinking = false;
-            }
+                addMessage("אליאב המייסד, יש שגיאה בחיבור או בעיבוד. וודא שהמפתח תקין ושאין הגבלות. ⚠️", 'bot');
+            } finally { isThinking = false; }
         }
 
-        // חיבור סופי של האירועים
-        btnSend.onclick = handleAction;
-        chatInput.onkeydown = (e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                handleAction();
-            }
-        };
+        btnSend.addEventListener('click', handleAction);
+        chatInput.addEventListener('keydown', (e) => (e.key === 'Enter' && !e.shiftKey) && (e.preventDefault(), handleAction()));
     </script>
 </body>
 </html>
-
