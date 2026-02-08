@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Skor-Heroes | By Eliav Skornik</title>
+    <title>Skor-Heroes | By Eliav Skornick</title>
     
     <!-- Dependencies -->
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
@@ -29,7 +29,7 @@
             user-select: none; touch-action: none;
         }
 
-        /* Fullscreen Invisible Camera */
+        /* Fullscreen Invisible Ghost Camera */
         #webcam-view {
             position: fixed; inset: 0; width: 100vw; height: 100vh;
             z-index: 0; transform: scaleX(-1); opacity: 0.04;
@@ -88,7 +88,7 @@
         }
         #level-progress { width: 0%; height: 100%; background: var(--primary); box-shadow: 0 0 10px var(--primary); transition: 0.2s; }
 
-        /* Screens */
+        /* Overlays */
         .overlay-screen {
             position: fixed; inset: 0; background: rgba(5, 5, 16, 0.98);
             z-index: 1000; display: flex; flex-direction: column;
@@ -111,10 +111,11 @@
 </head>
 <body>
 
-    <!-- Start Screen -->
+    <!-- Boot / Start Screen -->
     <div id="boot-screen" class="overlay-screen">
         <h1 class="game-title">SKOR-HEROES</h1>
-        <p class="by-text">BY ELIAV SKORNIK</p>
+        <p class="by-text">BY ELIAV SKORNICK</p>
+        <p style="margin-top: 20px; color: var(--danger); font-weight: bold; letter-spacing: 1px;">10 SECONDS PER LEVEL • DON'T FAIL</p>
         <button class="play-btn" onclick="startGame()">START MISSION</button>
     </div>
 
@@ -125,14 +126,15 @@
         <button class="play-btn" id="next-btn" onclick="nextLevel()">NEXT LEVEL</button>
     </div>
 
-    <!-- Fail Screen -->
+    <!-- Hardcore Fail Screen -->
     <div id="fail-screen" class="overlay-screen" style="display: none;">
-        <h1 class="game-title" style="color: var(--danger);">TIME EXPIRED</h1>
-        <p style="font-size: 1.3rem;">You were too slow! Try again.</p>
-        <button class="play-btn" onclick="retryLevel()">RETRY</button>
+        <h1 class="game-title" style="color: var(--danger);">GAME OVER</h1>
+        <p style="font-size: 1.5rem; margin-top: 10px;">You failed the time trial!</p>
+        <p style="font-size: 1.1rem; opacity: 0.7;">RESTARTING FROM LEVEL 1</p>
+        <button class="play-btn" onclick="restartFromStart()">RESTART QUEST</button>
     </div>
 
-    <!-- Fullscreen Invisible Camera -->
+    <!-- Hidden Video Feed -->
     <div id="webcam-view"><video id="webcam" autoplay playsinline></video></div>
     
     <div id="canvas-container"></div>
@@ -145,7 +147,7 @@
                     <circle class="timer-bg" cx="32.5" cy="32.5" r="30"></circle>
                     <circle id="timer-bar" class="timer-bar" cx="32.5" cy="32.5" r="30"></circle>
                 </svg>
-                <div id="timer-text">30</div>
+                <div id="timer-text">10</div>
             </div>
         </div>
 
@@ -172,30 +174,27 @@
             level: 1,
             score: 0,
             active: false,
-            timeLeft: 30,
-            maxTime: 30,
+            timeLeft: 10,
+            maxTime: 10,
             combo: 0,
             lastCollectTime: 0,
             totalItemsInLevel: 0
         };
 
-        // Level Generation Logic (Up to 50 Levels)
+        // 50 Levels Configuration
         function getLevelConfig(lvl) {
             const isBoss = lvl % 5 === 0;
             const colors = [0x00f2ff, 0xff007a, 0xffcc00, 0x00ff88, 0x7000ff, 0xff5e00, 0x00aaff, 0xff0044];
             
-            const baseItems = 6;
-            const items = isBoss ? 1 : Math.min(baseItems + Math.floor(lvl / 1.5), 35);
-            const baseTime = 30;
-            const timeReduction = lvl * 0.45;
-            const actualTime = Math.max(7, baseTime - timeReduction);
-            const speed = 0.15 + (lvl * 0.045);
+            // Scaling items by level
+            const items = isBoss ? 1 : Math.min(6 + Math.floor(lvl / 1.5), 30);
+            const speed = 0.2 + (lvl * 0.05);
 
             return {
                 title: isBoss ? `BOSS BATTLE ${lvl/5}` : `WORLD ${Math.ceil(lvl/10)}-${lvl % 10 || 10}`,
-                task: isBoss ? "Destroy the fast energy core!" : `Pop ${items} targets quickly!`,
+                task: isBoss ? "DESTROY THE CORE!" : `POP ${items} TARGETS!`,
                 color: colors[lvl % colors.length],
-                time: actualTime,
+                time: 10, // Fixed 10 seconds for all levels
                 items: items,
                 speed: speed,
                 isBoss: isBoss
@@ -253,7 +252,7 @@
                 video.srcObject = stream;
                 const cam = new Camera(video, { onFrame: async () => await hands.send({image: video}), width: 640, height: 480 });
                 cam.start();
-            } catch(e) { console.error("Webcam blocked", e); }
+            } catch(e) { console.error("Webcam failed", e); }
 
             setupLevel();
         }
@@ -262,7 +261,6 @@
             if (!gameState.active || !res.multiHandLandmarks) return;
             if (res.multiHandLandmarks.length > 0) {
                 const lm = res.multiHandLandmarks[0][8]; 
-                
                 handTarget.x = (0.5 - lm.x) * (bounds.x * 2.8); 
                 handTarget.y = (0.5 - lm.y) * (bounds.y * 2.8);
 
@@ -298,13 +296,13 @@
             for(let i=0; i<c.items; i++) {
                 let geo;
                 if(c.isBoss) {
-                    geo = new THREE.TorusKnotGeometry(30, 10, 128, 16);
+                    geo = new THREE.TorusKnotGeometry(32, 10, 128, 16);
                 } else {
                     const type = (gameState.level + i) % 4;
                     if(type === 0) geo = new THREE.IcosahedronGeometry(18, 0);
                     else if(type === 1) geo = new THREE.BoxGeometry(20, 20, 20);
                     else if(type === 2) geo = new THREE.OctahedronGeometry(18, 0);
-                    else geo = new THREE.TorusGeometry(12, 5, 12, 24);
+                    else geo = new THREE.TorusGeometry(14, 6, 12, 24);
                 }
                 
                 const mat = new THREE.MeshStandardMaterial({ 
@@ -329,7 +327,7 @@
 
         function checkCollision() {
             gameItems.forEach((item, idx) => {
-                if(item.position.distanceTo(handCursor.position) < 50) {
+                if(item.position.distanceTo(handCursor.position) < 55) {
                     handleCollect(item, idx);
                 }
             });
@@ -337,7 +335,7 @@
 
         function handleCollect(item, idx) {
             const now = Date.now();
-            if(now - gameState.lastCollectTime < 1200) gameState.combo++;
+            if(now - gameState.lastCollectTime < 1100) gameState.combo++;
             else gameState.combo = 1;
             gameState.lastCollectTime = now;
 
@@ -351,7 +349,7 @@
             scene.remove(item);
             gameItems.splice(idx, 1);
             
-            if(gameItems.length === 0) setTimeout(triggerWin, 350);
+            if(gameItems.length === 0) setTimeout(triggerWin, 300);
             updateUI();
         }
 
@@ -364,11 +362,12 @@
                 const p = new THREE.Mesh(geo, mat);
                 p.position.copy(pos);
                 scene.add(p);
-                const dest = new THREE.Vector3((Math.random()-0.5)*180, (Math.random()-0.5)*180, (Math.random()-0.5)*180);
+                const dest = new THREE.Vector3((Math.random()-0.5)*200, (Math.random()-0.5)*200, (Math.random()-0.5)*200);
                 gsap.to(p.position, { x: "+="+dest.x, y: "+="+dest.y, z: "+="+dest.z, duration: 0.5 });
                 gsap.to(p.scale, { x: 0, y: 0, z: 0, duration: 0.5, onComplete: () => scene.remove(p) });
             }
-            gsap.to(camera.position, { x: (Math.random()-0.5)*15, y: (Math.random()-0.5)*15, duration: 0.05, repeat: 3, yoyo: true, onComplete: () => {
+            // Screen Vibration
+            gsap.to(camera.position, { x: (Math.random()-0.5)*20, y: (Math.random()-0.5)*20, duration: 0.05, repeat: 3, yoyo: true, onComplete: () => {
                 camera.position.x = 0; camera.position.y = 0;
             }});
         }
@@ -378,14 +377,14 @@
             div.className = 'floating-text';
             div.innerText = text;
             div.style.color = isCombo ? 'var(--secondary)' : 'white';
-            div.style.fontSize = isCombo ? '2.8rem' : '1.8rem';
+            div.style.fontSize = isCombo ? '3rem' : '1.8rem';
             document.body.appendChild(div);
 
             const vector = pos.clone().project(camera);
             div.style.left = (vector.x + 1) / 2 * window.innerWidth + 'px';
             div.style.top = -(vector.y - 1) / 2 * window.innerHeight + 'px';
 
-            gsap.to(div, { y: "-=120", opacity: 0, duration: 0.8, onComplete: () => div.remove() });
+            gsap.to(div, { y: "-=130", opacity: 0, duration: 0.8, onComplete: () => div.remove() });
         }
 
         function updateUI() {
@@ -412,7 +411,7 @@
             timerBar.style.strokeDashoffset = 188 * (1 - percent);
             timerText.innerText = Math.max(0, Math.ceil(gameState.timeLeft));
 
-            if(percent < 0.3) {
+            if(percent < 0.4) {
                 timerBar.style.stroke = 'var(--danger)';
             } else {
                 timerBar.style.stroke = 'var(--primary)';
@@ -432,7 +431,10 @@
             document.getElementById('fail-screen').style.display = 'flex';
         }
 
-        function retryLevel() {
+        // Hardcore Mode: Reset everything
+        function restartFromStart() {
+            gameState.level = 1;
+            gameState.score = 0;
             document.getElementById('fail-screen').style.display = 'none';
             setupLevel();
         }
@@ -440,8 +442,9 @@
         function nextLevel() {
             gameState.level++;
             if(gameState.level > 50) {
-                alert("Legendary! You finished all 50 levels!");
+                alert("ULTIMATE LEGEND! All 50 levels conquered!");
                 gameState.level = 1;
+                gameState.score = 0;
             }
             document.getElementById('win-screen').style.display = 'none';
             setupLevel();
@@ -454,19 +457,20 @@
 
             if(handCursor) {
                 handCursor.position.lerp(handTarget, 0.25);
-                handCursor.rotation.z += 0.06;
-                handCursor.scale.setScalar(isPinching ? 1.6 : 1);
+                handCursor.rotation.z += 0.07;
+                handCursor.scale.setScalar(isPinching ? 1.7 : 1);
             }
 
             gameItems.forEach((item, i) => {
-                item.rotation.y += 0.025;
-                item.rotation.x += 0.015;
+                item.rotation.y += 0.03;
+                item.rotation.x += 0.02;
                 item.position.add(item.userData.velocity);
                 
+                // Keep objects within responsive boundaries
                 if(Math.abs(item.position.x) > bounds.x) item.userData.velocity.x *= -1;
                 if(Math.abs(item.position.y) > bounds.y) item.userData.velocity.y *= -1;
                 
-                item.position.y += Math.sin(t + item.userData.offset) * 0.15;
+                item.position.y += Math.sin(t + item.userData.offset) * 0.18;
             });
 
             if(renderer) renderer.render(scene, camera);
