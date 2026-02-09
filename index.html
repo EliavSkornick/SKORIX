@@ -2,14 +2,15 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Skor-Heroes | By Eliav Skornick</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Skor-Heroes | Eliav Skornick Ultra-Hardcore</title>
     
     <!-- Dependencies -->
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Luckiest+Guy&family=Rubik:wght@400;900&display=swap');
@@ -18,8 +19,8 @@
             --primary: #00f2ff;
             --secondary: #ff007a;
             --gold: #ffcc00;
-            --bg: #050510;
-            --danger: #ff3333;
+            --bg: #010105;
+            --danger: #ff0000;
         }
 
         body, html {
@@ -29,17 +30,17 @@
             user-select: none; touch-action: none;
         }
 
-        /* Fullscreen Invisible Ghost Camera */
+        /* מצלמת רפאים ברקע */
         #webcam-view {
             position: fixed; inset: 0; width: 100vw; height: 100vh;
-            z-index: 0; transform: scaleX(-1); opacity: 0.04;
-            pointer-events: none; filter: brightness(0.6) contrast(1.1);
+            z-index: 0; transform: scaleX(-1); opacity: 0.05;
+            pointer-events: none; filter: brightness(0.5) contrast(1.3);
         }
         video { width: 100%; height: 100%; object-fit: cover; }
 
         #canvas-container { position: absolute; inset: 0; z-index: 2; background: transparent; }
 
-        /* Game UI */
+        /* ממשק משתמש */
         .game-ui {
             position: absolute; inset: 0; z-index: 10;
             pointer-events: none; padding: env(safe-area-inset-top, 20px) 20px 20px 20px;
@@ -49,10 +50,10 @@
         .top-row { display: flex; justify-content: space-between; align-items: center; width: 100%; }
         
         .score-box {
-            background: rgba(0,0,0,0.85); border: 2.5px solid var(--primary);
+            background: rgba(0,0,0,0.9); border: 2.5px solid var(--primary);
             padding: 8px 18px; border-radius: 50px;
-            font-family: 'Luckiest Guy', cursive; font-size: 1.8rem;
-            box-shadow: 0 0 15px rgba(0, 242, 255, 0.4);
+            font-family: 'Luckiest Guy', cursive; font-size: 1.5rem;
+            box-shadow: 0 0 15px var(--primary);
         }
 
         .timer-container {
@@ -60,83 +61,66 @@
             display: flex; align-items: center; justify-content: center;
         }
         .timer-svg { transform: rotate(-90deg); width: 65px; height: 65px; }
-        .timer-bg { fill: none; stroke: rgba(255,255,255,0.1); stroke-width: 6; }
+        .timer-bg { fill: none; stroke: rgba(255,255,255,0.05); stroke-width: 8; }
         .timer-bar { 
-            fill: none; stroke: var(--primary); stroke-width: 6; 
+            fill: none; stroke: var(--secondary); stroke-width: 8; 
             stroke-dasharray: 188; stroke-dashoffset: 0;
-            transition: stroke-dashoffset 0.1s linear, stroke 0.3s;
         }
-        #timer-text { position: absolute; font-family: 'Luckiest Guy'; font-size: 1.2rem; }
+        #timer-text { position: absolute; font-family: 'Luckiest Guy'; font-size: 1.5rem; color: #fff; }
 
-        .mission-header {
-            width: 100%; text-align: center; margin-top: 15px;
-        }
-        #level-tag { font-family: 'Luckiest Guy', cursive; color: var(--gold); font-size: 1.5rem; text-shadow: 0 0 10px rgba(255,204,0,0.5); }
-        #mission-text { font-size: 1rem; font-weight: 900; text-shadow: 0 2px 8px #000; opacity: 0.8; }
+        .mission-header { width: 100%; text-align: center; margin-top: 5px; }
+        #level-tag { font-family: 'Luckiest Guy'; color: var(--gold); font-size: 1.8rem; text-shadow: 0 0 10px rgba(255,204,0,0.5); }
+        #mission-text { font-size: 0.85rem; font-weight: 900; color: var(--danger); text-transform: uppercase; letter-spacing: 1px; }
 
-        .bottom-hud {
-            position: absolute; bottom: 30px; left: 0; width: 100%;
-            display: flex; flex-direction: column; align-items: center; gap: 10px;
-        }
-        .combo-badge {
-            font-family: 'Luckiest Guy'; color: var(--secondary);
-            font-size: 1.8rem; opacity: 0; transform: translateY(10px);
-        }
-        .progress-wrap {
-            width: 85%; height: 8px; background: rgba(255,255,255,0.05); border-radius: 10px;
-            overflow: hidden; border: 1px solid rgba(255,255,255,0.1);
-        }
-        #level-progress { width: 0%; height: 100%; background: var(--primary); box-shadow: 0 0 10px var(--primary); transition: 0.2s; }
-
-        /* Overlays */
+        /* מסכי הודעות */
         .overlay-screen {
-            position: fixed; inset: 0; background: rgba(5, 5, 16, 0.98);
+            position: fixed; inset: 0; background: rgba(0, 0, 0, 0.98);
             z-index: 1000; display: flex; flex-direction: column;
             align-items: center; justify-content: center; text-align: center; padding: 30px;
         }
-        .game-title { font-family: 'Luckiest Guy', cursive; font-size: clamp(3rem, 10vw, 5rem); color: var(--primary); margin: 0; }
-        .by-text { font-family: 'Rubik', sans-serif; font-weight: 900; color: var(--gold); margin-top: 10px; font-size: 1.5rem; text-transform: uppercase; letter-spacing: 2px; }
+        .game-title { font-family: 'Luckiest Guy'; font-size: clamp(3rem, 15vw, 6rem); color: var(--primary); margin: 0; }
+        .by-text { font-family: 'Rubik'; font-weight: 900; color: var(--gold); margin-top: 5px; font-size: 1.2rem; letter-spacing: 3px; }
         
         .play-btn {
             background: var(--gold); color: #000; border: none;
-            padding: 15px 45px; font-size: 1.8rem; font-family: 'Luckiest Guy', cursive;
-            border-radius: 18px; cursor: pointer; margin-top: 30px;
-            box-shadow: 0 8px 0 #b38f00; transition: 0.1s;
-            pointer-events: auto;
+            padding: 15px 45px; font-size: 2rem; font-family: 'Luckiest Guy';
+            border-radius: 20px; cursor: pointer; margin-top: 30px;
+            box-shadow: 0 10px 0 #b38f00; pointer-events: auto;
         }
-        .play-btn:active { transform: translateY(4px); box-shadow: 0 4px 0 #b38f00; }
+        .play-btn:active { transform: translateY(5px); box-shadow: 0 5px 0 #b38f00; }
+
+        .fail-msg { color: var(--danger); font-size: 1.5rem; font-weight: 900; margin-top: 10px; }
 
         .floating-text { position: fixed; font-family: 'Luckiest Guy'; pointer-events: none; z-index: 50; }
     </style>
 </head>
 <body>
 
-    <!-- Boot / Start Screen -->
+    <!-- מסך פתיחה -->
     <div id="boot-screen" class="overlay-screen">
         <h1 class="game-title">SKOR-HEROES</h1>
         <p class="by-text">BY ELIAV SKORNICK</p>
-        <p style="margin-top: 20px; color: var(--danger); font-weight: bold; letter-spacing: 1px;">10 SECONDS PER LEVEL • DON'T FAIL</p>
-        <button class="play-btn" onclick="startGame()">START MISSION</button>
+        <div style="margin-top: 25px; color: #fff; font-weight: bold;">5 SECONDS • 50 LEVELS • EXTREME SPEED</div>
+        <button class="play-btn" onclick="startGame()">BATTLE!</button>
     </div>
 
-    <!-- Win Screen -->
-    <div id="win-screen" class="overlay-screen" style="display: none;">
-        <h1 class="game-title" style="color: var(--gold);">MISSION CLEARED!</h1>
-        <p id="win-stats" style="font-size: 1.5rem; margin: 15px 0;"></p>
-        <button class="play-btn" id="next-btn" onclick="nextLevel()">NEXT LEVEL</button>
+    <!-- מסך ניצחון סופי -->
+    <div id="victory-screen" class="overlay-screen" style="display: none;">
+        <h1 class="game-title" style="color: var(--gold);">ULTIMATE LEGEND</h1>
+        <p style="font-size: 1.5rem; margin: 20px 0;">You conquered all 50 Levels of Hell.</p>
+        <p style="font-family: 'Luckiest Guy'; color: var(--gold); font-size: 1.8rem;">GOLDEN SKIN UNLOCKED</p>
+        <button class="play-btn" onclick="enterGodMode()">GOD MODE</button>
     </div>
 
-    <!-- Hardcore Fail Screen -->
+    <!-- מסך כישלון (Hardcore Reset) -->
     <div id="fail-screen" class="overlay-screen" style="display: none;">
-        <h1 class="game-title" style="color: var(--danger);">GAME OVER</h1>
-        <p style="font-size: 1.5rem; margin-top: 10px;">You failed the time trial!</p>
-        <p style="font-size: 1.1rem; opacity: 0.7;">RESTARTING FROM LEVEL 1</p>
-        <button class="play-btn" onclick="restartFromStart()">RESTART QUEST</button>
+        <h1 class="game-title" style="color: var(--danger);">TERMINATED</h1>
+        <p id="fail-reason" class="fail-msg">TIME EXPIRED</p>
+        <p style="opacity: 0.6; margin-top: 20px;">Hardcore Mode: Restarting from Level 1</p>
+        <button class="play-btn" onclick="restartFromStart()">RESTART</button>
     </div>
 
-    <!-- Hidden Video Feed -->
     <div id="webcam-view"><video id="webcam" autoplay playsinline></video></div>
-    
     <div id="canvas-container"></div>
 
     <div class="game-ui">
@@ -147,93 +131,94 @@
                     <circle class="timer-bg" cx="32.5" cy="32.5" r="30"></circle>
                     <circle id="timer-bar" class="timer-bar" cx="32.5" cy="32.5" r="30"></circle>
                 </svg>
-                <div id="timer-text">10</div>
+                <div id="timer-text">5</div>
             </div>
         </div>
-
         <div class="mission-header">
             <div id="level-tag">LEVEL 1</div>
-            <div id="mission-text">READY?</div>
-        </div>
-
-        <div class="bottom-hud">
-            <div id="combo-ui" class="combo-badge">COMBO X2</div>
-            <div class="progress-wrap">
-                <div id="level-progress"></div>
-            </div>
+            <div id="mission-text">STAY FOCUSED</div>
         </div>
     </div>
 
     <script>
         let scene, camera, renderer, clock;
         let handCursor, handTarget = new THREE.Vector3();
-        let gameItems = [];
-        let isPinching = false;
+        let targets = [], obstacles = [];
+        let isPinching = false, godMode = false, isLegend = false;
+        let safeBounds = { x: 50, y: 50 };
         
         let gameState = {
-            level: 1,
-            score: 0,
-            active: false,
-            timeLeft: 10,
-            maxTime: 10,
-            combo: 0,
-            lastCollectTime: 0,
-            totalItemsInLevel: 0
+            level: 1, score: 0, active: false, timeLeft: 5, totalItems: 0
         };
 
-        // 50 Levels Configuration
-        function getLevelConfig(lvl) {
-            const isBoss = lvl % 5 === 0;
-            const colors = [0x00f2ff, 0xff007a, 0xffcc00, 0x00ff88, 0x7000ff, 0xff5e00, 0x00aaff, 0xff0044];
-            
-            // Scaling items by level
-            const items = isBoss ? 1 : Math.min(6 + Math.floor(lvl / 1.5), 30);
-            const speed = 0.2 + (lvl * 0.05);
-
-            return {
-                title: isBoss ? `BOSS BATTLE ${lvl/5}` : `WORLD ${Math.ceil(lvl/10)}-${lvl % 10 || 10}`,
-                task: isBoss ? "DESTROY THE CORE!" : `POP ${items} TARGETS!`,
-                color: colors[lvl % colors.length],
-                time: 10, // Fixed 10 seconds for all levels
-                items: items,
-                speed: speed,
-                isBoss: isBoss
-            };
-        }
-
-        let bounds = { x: 180, y: 120 };
-
-        function updateBounds() {
+        // חישוב גבולות גזרה בטוחים למניעת יציאת מטרות מהמסך (במיוחד בטלפון)
+        function updateSafeBounds() {
             if (!camera) return;
             const aspect = window.innerWidth / window.innerHeight;
             const vFOV = THREE.MathUtils.degToRad(camera.fov);
             const height = 2 * Math.tan(vFOV / 2) * camera.position.z;
             const width = height * aspect;
-            bounds.x = (width / 2) * 0.8; 
-            bounds.y = (height / 2) * 0.8;
+            
+            // שימוש ב-70% מהשטח הראוי כדי להבטיח נראות מלאה
+            safeBounds.x = (width / 2) * 0.7;
+            safeBounds.y = (height / 2) * 0.7;
+        }
+
+        // מחולל גיאומטריות - כל שלב צורה אחרת
+        function getGeometry(lvl, idx) {
+            const types = [
+                () => new THREE.IcosahedronGeometry(18, 0),
+                () => new THREE.BoxGeometry(20, 20, 20),
+                () => new THREE.TorusGeometry(14, 5, 12, 24),
+                () => new THREE.OctahedronGeometry(18, 0),
+                () => new THREE.DodecahedronGeometry(16, 0),
+                () => new THREE.TetrahedronGeometry(20, 0),
+                () => new THREE.SphereGeometry(18, 16, 16)
+            ];
+            const typeIndex = (lvl + idx) % types.length;
+            return types[typeIndex]();
+        }
+
+        function getLevelConfig(lvl) {
+            const isBoss = lvl % 5 === 0;
+            const colors = [0x00f2ff, 0xff007a, 0xffcc00, 0x00ff88, 0x7000ff, 0xff5e00, 0x00aaff, 0xff0044];
+            
+            // קושי אגרסיבי: פי 2 יותר קשה בכל שלב (במהירות ובכמות)
+            const baseItems = 3;
+            const items = isBoss ? 1 : Math.min(baseItems + Math.floor(lvl * 0.8), 35);
+            const speed = 0.3 + (lvl * 0.15); // מהירות עולה משמעותית
+            const mineCount = lvl < 4 ? 0 : Math.min(Math.floor(lvl / 2), 15);
+
+            return {
+                title: isBoss ? `BOSS FIGHT ${lvl/5}` : `ZONE ${Math.ceil(lvl/10)}-${lvl%10||10}`,
+                task: isBoss ? "DESTROY THE CORE!" : `POP ${items} TARGETS!`,
+                color: colors[lvl % colors.length],
+                items, speed, mineCount, isBoss
+            };
         }
 
         function initThree() {
             scene = new THREE.Scene();
             camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 2000);
-            camera.position.z = 240; 
-
+            camera.position.z = 250;
+            
             renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
             document.getElementById('canvas-container').appendChild(renderer.domElement);
 
-            scene.add(new THREE.AmbientLight(0xffffff, 0.6));
-            const pLight = new THREE.PointLight(0x00f2ff, 2, 1200);
-            pLight.position.set(0, 100, 150);
+            scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+            const pLight = new THREE.PointLight(0x00f2ff, 2.5, 1000);
+            pLight.position.set(0, 100, 200);
             scene.add(pLight);
 
-            const cursorGeo = new THREE.RingGeometry(14, 16, 32);
-            const cursorMat = new THREE.MeshBasicMaterial({ color: 0x00f2ff, transparent: true, opacity: 0.8 });
-            handCursor = new THREE.Mesh(cursorGeo, cursorMat);
+            handCursor = new THREE.Mesh(
+                new THREE.TorusGeometry(14, 2, 16, 32),
+                new THREE.MeshBasicMaterial({ color: 0x00f2ff, transparent: true, opacity: 0.8 })
+            );
             scene.add(handCursor);
 
-            updateBounds();
+            updateSafeBounds();
             clock = new THREE.Clock();
             animate();
         }
@@ -241,248 +226,139 @@
         async function startGame() {
             document.getElementById('boot-screen').style.display = 'none';
             if(!scene) initThree();
-            
             const hands = new Hands({ locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}` });
-            hands.setOptions({ maxNumHands: 1, modelComplexity: 1, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
+            hands.setOptions({ maxNumHands: 1, modelComplexity: 1, minDetectionConfidence: 0.5 });
             hands.onResults(onHandResults);
-
             const video = document.getElementById('webcam');
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
-                video.srcObject = stream;
-                const cam = new Camera(video, { onFrame: async () => await hands.send({image: video}), width: 640, height: 480 });
-                cam.start();
-            } catch(e) { console.error("Webcam failed", e); }
-
+            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+            video.srcObject = stream;
+            new Camera(video, { onFrame: async () => await hands.send({image: video}), width: 640, height: 480 }).start();
             setupLevel();
         }
 
         function onHandResults(res) {
             if (!gameState.active || !res.multiHandLandmarks) return;
-            if (res.multiHandLandmarks.length > 0) {
-                const lm = res.multiHandLandmarks[0][8]; 
-                handTarget.x = (0.5 - lm.x) * (bounds.x * 2.8); 
-                handTarget.y = (0.5 - lm.y) * (bounds.y * 2.8);
+            const lm = res.multiHandLandmarks[0];
+            if(lm) {
+                handTarget.x = (0.5 - lm[8].x) * (safeBounds.x * 2.8); 
+                handTarget.y = (0.5 - lm[8].y) * (safeBounds.y * 2.8);
+                const thumb = lm[4];
+                const dist = Math.sqrt(Math.pow(lm[8].x-thumb.x, 2) + Math.pow(lm[8].y-thumb.y, 2));
+                if(dist < 0.08) { if(!isPinching) checkCollision(); isPinching = true; } else isPinching = false;
+            }
+        }
 
-                const thumb = res.multiHandLandmarks[0][4];
-                const dist = Math.sqrt(Math.pow(lm.x-thumb.x, 2) + Math.pow(lm.y-thumb.y, 2));
-                
-                if(dist < 0.08) {
-                    if(!isPinching) checkCollision();
-                    isPinching = true;
-                } else { isPinching = false; }
+        function spawnEntities(c) {
+            targets.concat(obstacles).forEach(e => scene.remove(e));
+            targets = []; obstacles = [];
+
+            for(let i=0; i<c.items; i++) {
+                const geo = c.isBoss ? new THREE.TorusKnotGeometry(35, 12, 128, 16) : getGeometry(gameState.level, i);
+                const mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: c.color, emissive: c.color, emissiveIntensity: 0.5 }));
+                mesh.position.set((Math.random()-0.5)*safeBounds.x*1.8, (Math.random()-0.5)*safeBounds.y*1.8, 0);
+                mesh.userData = { vel: new THREE.Vector3((Math.random()-0.5)*c.speed, (Math.random()-0.5)*c.speed, 0), shrink: gameState.level > 15 };
+                scene.add(mesh); targets.push(mesh);
+            }
+
+            if(!godMode) {
+                for(let i=0; i<c.mineCount; i++) {
+                    const mesh = new THREE.Mesh(new THREE.OctahedronGeometry(15, 0), new THREE.MeshStandardMaterial({ color: 0xff0000, emissive: 0xff0000 }));
+                    mesh.position.set((Math.random()-0.5)*safeBounds.x*1.8, (Math.random()-0.5)*safeBounds.y*1.8, 0);
+                    mesh.userData = { vel: new THREE.Vector3((Math.random()-0.5)*c.speed*1.4, (Math.random()-0.5)*c.speed*1.4, 0), mine: true };
+                    scene.add(mesh); obstacles.push(mesh);
+                }
             }
         }
 
         function setupLevel() {
+            updateSafeBounds();
             const c = getLevelConfig(gameState.level);
-            gameState.maxTime = c.time;
-            gameState.timeLeft = c.time;
+            gameState.timeLeft = 5; // 5 שניות לכל שלב
             gameState.active = true;
-            gameState.combo = 0;
-            gameState.totalItemsInLevel = c.items;
-            
-            document.getElementById('level-tag').innerText = c.title;
+            document.getElementById('level-tag').innerText = `LEVEL ${gameState.level}`;
             document.getElementById('mission-text').innerText = c.task;
-            
-            spawnItems(c);
-            updateUI();
-        }
-
-        function spawnItems(c) {
-            gameItems.forEach(i => scene.remove(i));
-            gameItems = [];
-            
-            for(let i=0; i<c.items; i++) {
-                let geo;
-                if(c.isBoss) {
-                    geo = new THREE.TorusKnotGeometry(32, 10, 128, 16);
-                } else {
-                    const type = (gameState.level + i) % 4;
-                    if(type === 0) geo = new THREE.IcosahedronGeometry(18, 0);
-                    else if(type === 1) geo = new THREE.BoxGeometry(20, 20, 20);
-                    else if(type === 2) geo = new THREE.OctahedronGeometry(18, 0);
-                    else geo = new THREE.TorusGeometry(14, 6, 12, 24);
-                }
-                
-                const mat = new THREE.MeshStandardMaterial({ 
-                    color: c.color, emissive: c.color, emissiveIntensity: 0.6, metalness: 0.9, roughness: 0.1
-                });
-                const mesh = new THREE.Mesh(geo, mat);
-                
-                mesh.position.set(
-                    (Math.random()-0.5) * bounds.x * 1.8,
-                    (Math.random()-0.5) * bounds.y * 1.8,
-                    (Math.random()-0.5) * 40
-                );
-                
-                mesh.userData = { 
-                    offset: Math.random() * Math.PI * 2,
-                    velocity: new THREE.Vector3((Math.random()-0.5)*c.speed, (Math.random()-0.5)*c.speed, 0)
-                };
-                scene.add(mesh);
-                gameItems.push(mesh);
-            }
+            spawnEntities(c);
         }
 
         function checkCollision() {
-            gameItems.forEach((item, idx) => {
-                if(item.position.distanceTo(handCursor.position) < 55) {
-                    handleCollect(item, idx);
+            targets.forEach((t, i) => {
+                if(t.position.distanceTo(handCursor.position) < 55) {
+                    targets.splice(i, 1); scene.remove(t);
+                    gameState.score += 150;
+                    if(targets.length === 0) {
+                        if(gameState.level === 50) triggerUltimateVictory();
+                        else nextLevel();
+                    }
                 }
+            });
+            obstacles.forEach(o => {
+                if(o.position.distanceTo(handCursor.position) < 40) triggerFail("MINE DETONATED!");
             });
         }
 
-        function handleCollect(item, idx) {
-            const now = Date.now();
-            if(now - gameState.lastCollectTime < 1100) gameState.combo++;
-            else gameState.combo = 1;
-            gameState.lastCollectTime = now;
-
-            const bonus = gameState.combo * 50;
-            const points = 150 + bonus;
-            gameState.score += points;
-            
-            createExplosion(item.position, item.material.color);
-            showFloatingText(item.position, `+${points}`, gameState.combo > 1);
-            
-            scene.remove(item);
-            gameItems.splice(idx, 1);
-            
-            if(gameItems.length === 0) setTimeout(triggerWin, 300);
-            updateUI();
+        function triggerUltimateVictory() {
+            gameState.active = false; isLegend = true;
+            handCursor.material.color.setHex(0xffcc00);
+            confetti({ particleCount: 200, spread: 90, origin: { y: 0.6 } });
+            document.getElementById('victory-screen').style.display = 'flex';
         }
 
-        function createExplosion(pos, color) {
-            const count = 18;
-            const geo = new THREE.BoxGeometry(4,4,4);
-            const mat = new THREE.MeshBasicMaterial({ color: color });
-
-            for(let i=0; i<count; i++) {
-                const p = new THREE.Mesh(geo, mat);
-                p.position.copy(pos);
-                scene.add(p);
-                const dest = new THREE.Vector3((Math.random()-0.5)*200, (Math.random()-0.5)*200, (Math.random()-0.5)*200);
-                gsap.to(p.position, { x: "+="+dest.x, y: "+="+dest.y, z: "+="+dest.z, duration: 0.5 });
-                gsap.to(p.scale, { x: 0, y: 0, z: 0, duration: 0.5, onComplete: () => scene.remove(p) });
-            }
-            // Screen Vibration
-            gsap.to(camera.position, { x: (Math.random()-0.5)*20, y: (Math.random()-0.5)*20, duration: 0.05, repeat: 3, yoyo: true, onComplete: () => {
-                camera.position.x = 0; camera.position.y = 0;
-            }});
-        }
-
-        function showFloatingText(pos, text, isCombo) {
-            const div = document.createElement('div');
-            div.className = 'floating-text';
-            div.innerText = text;
-            div.style.color = isCombo ? 'var(--secondary)' : 'white';
-            div.style.fontSize = isCombo ? '3rem' : '1.8rem';
-            document.body.appendChild(div);
-
-            const vector = pos.clone().project(camera);
-            div.style.left = (vector.x + 1) / 2 * window.innerWidth + 'px';
-            div.style.top = -(vector.y - 1) / 2 * window.innerHeight + 'px';
-
-            gsap.to(div, { y: "-=130", opacity: 0, duration: 0.8, onComplete: () => div.remove() });
-        }
-
-        function updateUI() {
-            document.getElementById('score-display').innerText = gameState.score.toString().padStart(4, '0');
-            const comboUI = document.getElementById('combo-ui');
-            if(gameState.combo > 1) {
-                comboUI.innerText = `COMBO X${gameState.combo}!`;
-                gsap.to(comboUI, { opacity: 1, y: 0, duration: 0.2 });
-            } else {
-                gsap.to(comboUI, { opacity: 0, y: 15, duration: 0.2 });
-            }
-            const prog = ((gameState.totalItemsInLevel - gameItems.length) / gameState.totalItemsInLevel) * 100;
-            document.getElementById('level-progress').style.width = prog + "%";
-        }
-
-        function updateTimer() {
-            if(!gameState.active) return;
-            gameState.timeLeft -= 1/60;
-
-            const timerBar = document.getElementById('timer-bar');
-            const timerText = document.getElementById('timer-text');
-            const percent = gameState.timeLeft / gameState.maxTime;
-            
-            timerBar.style.strokeDashoffset = 188 * (1 - percent);
-            timerText.innerText = Math.max(0, Math.ceil(gameState.timeLeft));
-
-            if(percent < 0.4) {
-                timerBar.style.stroke = 'var(--danger)';
-            } else {
-                timerBar.style.stroke = 'var(--primary)';
-            }
-
-            if(gameState.timeLeft <= 0) triggerFail();
-        }
-
-        function triggerWin() {
+        function triggerFail(reason) {
+            if(godMode) return;
             gameState.active = false;
-            document.getElementById('win-stats').innerHTML = `Score: ${gameState.score}<br>Level ${gameState.level} Cleared!`;
-            document.getElementById('win-screen').style.display = 'flex';
-        }
-
-        function triggerFail() {
-            gameState.active = false;
+            document.getElementById('fail-reason').innerText = reason;
             document.getElementById('fail-screen').style.display = 'flex';
         }
 
-        // Hardcore Mode: Reset everything
         function restartFromStart() {
-            gameState.level = 1;
-            gameState.score = 0;
+            gameState.level = 1; gameState.score = 0;
             document.getElementById('fail-screen').style.display = 'none';
             setupLevel();
         }
 
         function nextLevel() {
             gameState.level++;
-            if(gameState.level > 50) {
-                alert("ULTIMATE LEGEND! All 50 levels conquered!");
-                gameState.level = 1;
-                gameState.score = 0;
-            }
-            document.getElementById('win-screen').style.display = 'none';
             setupLevel();
+        }
+
+        function enterGodMode() {
+            godMode = true; document.getElementById('victory-screen').style.display = 'none';
+            gameState.level = 1; setupLevel();
         }
 
         function animate() {
             requestAnimationFrame(animate);
-            const t = clock ? clock.getElapsedTime() : 0;
-            if(gameState.active) updateTimer();
+            if(gameState.active && !godMode) {
+                gameState.timeLeft -= 1/60;
+                const perc = gameState.timeLeft / 5;
+                document.getElementById('timer-bar').style.strokeDashoffset = 188 * (1 - perc);
+                document.getElementById('timer-text').innerText = Math.max(0, Math.ceil(gameState.timeLeft));
+                if(gameState.timeLeft <= 0) triggerFail("TIME EXPIRED!");
+            }
 
             if(handCursor) {
                 handCursor.position.lerp(handTarget, 0.25);
-                handCursor.rotation.z += 0.07;
-                handCursor.scale.setScalar(isPinching ? 1.7 : 1);
+                handCursor.rotation.z += 0.08;
+                if(isLegend) handCursor.scale.setScalar(1.5 + Math.sin(Date.now()*0.01)*0.2);
             }
 
-            gameItems.forEach((item, i) => {
-                item.rotation.y += 0.03;
-                item.rotation.x += 0.02;
-                item.position.add(item.userData.velocity);
-                
-                // Keep objects within responsive boundaries
-                if(Math.abs(item.position.x) > bounds.x) item.userData.velocity.x *= -1;
-                if(Math.abs(item.position.y) > bounds.y) item.userData.velocity.y *= -1;
-                
-                item.position.y += Math.sin(t + item.userData.offset) * 0.18;
+            [...targets, ...obstacles].forEach(e => {
+                e.position.add(e.userData.vel);
+                if(Math.abs(e.position.x) > safeBounds.x) e.userData.vel.x *= -1;
+                if(Math.abs(e.position.y) > safeBounds.y) e.userData.vel.y *= -1;
+                e.rotation.x += 0.04; e.rotation.y += 0.04;
+                if(e.userData.shrink && gameState.active) e.scale.multiplyScalar(0.995);
             });
 
-            if(renderer) renderer.render(scene, camera);
+            renderer.render(scene, camera);
+            document.getElementById('score-display').innerText = gameState.score.toString().padStart(4, '0');
         }
 
         window.addEventListener('resize', () => {
-            if(camera) {
-                camera.aspect = window.innerWidth / window.innerHeight;
-                camera.updateProjectionMatrix();
-                renderer.setSize(window.innerWidth, window.innerHeight);
-                updateBounds();
-            }
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            updateSafeBounds();
         });
     </script>
 </body>
