@@ -3,9 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Skor-Heroes | By Eliav Skornick</title>
+    <title>Skor-Heroes | Elite Global</title>
     
-    <!-- Dependencies -->
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -13,478 +12,207 @@
 
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Luckiest+Guy&family=Rubik:wght@400;900&display=swap');
-
-        :root {
-            --primary: #00f2ff;
-            --secondary: #ff007a;
-            --gold: #ffcc00;
-            --bg: #050510;
-            --danger: #ff3333;
-        }
-
-        body, html {
-            margin: 0; padding: 0; width: 100%; height: 100%;
-            background-color: var(--bg); color: white;
-            font-family: 'Rubik', sans-serif; overflow: hidden;
-            user-select: none; touch-action: none;
-        }
-
-        /* Fullscreen Invisible Ghost Camera */
-        #webcam-view {
-            position: fixed; inset: 0; width: 100vw; height: 100vh;
-            z-index: 0; transform: scaleX(-1); opacity: 0.04;
-            pointer-events: none; filter: brightness(0.6) contrast(1.1);
-        }
+        :root { --primary: #00f2ff; --secondary: #ff007a; --gold: #ffcc00; --bg: #050510; }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: var(--bg); color: white; font-family: 'Rubik', sans-serif; overflow: hidden; }
+        
+        #webcam-view { position: fixed; inset: 0; z-index: 0; transform: scaleX(-1); opacity: 0.15; filter: brightness(1.2); }
         video { width: 100%; height: 100%; object-fit: cover; }
+        #canvas-container { position: absolute; inset: 0; z-index: 2; }
 
-        #canvas-container { position: absolute; inset: 0; z-index: 2; background: transparent; }
-
-        /* Game UI */
-        .game-ui {
-            position: absolute; inset: 0; z-index: 10;
-            pointer-events: none; padding: env(safe-area-inset-top, 20px) 20px 20px 20px;
-            display: flex; flex-direction: column;
-        }
-
-        .top-row { display: flex; justify-content: space-between; align-items: center; width: 100%; }
+        /* UI Elements */
+        .game-ui { position: absolute; inset: 0; z-index: 10; pointer-events: none; padding: 20px; }
+        .score-box { background: rgba(0,0,0,0.8); border: 2px solid var(--primary); padding: 10px 20px; border-radius: 50px; font-family: 'Luckiest Guy'; font-size: 2rem; box-shadow: 0 0 15px var(--primary); }
         
-        .score-box {
-            background: rgba(0,0,0,0.85); border: 2.5px solid var(--primary);
-            padding: 8px 18px; border-radius: 50px;
-            font-family: 'Luckiest Guy', cursive; font-size: 1.8rem;
-            box-shadow: 0 0 15px rgba(0, 242, 255, 0.4);
-        }
-
-        .timer-container {
-            position: relative; width: 65px; height: 65px;
-            display: flex; align-items: center; justify-content: center;
-        }
-        .timer-svg { transform: rotate(-90deg); width: 65px; height: 65px; }
-        .timer-bg { fill: none; stroke: rgba(255,255,255,0.1); stroke-width: 6; }
-        .timer-bar { 
-            fill: none; stroke: var(--primary); stroke-width: 6; 
-            stroke-dasharray: 188; stroke-dashoffset: 0;
-            transition: stroke-dashoffset 0.1s linear, stroke 0.3s;
-        }
-        #timer-text { position: absolute; font-family: 'Luckiest Guy'; font-size: 1.2rem; }
-
-        .mission-header {
-            width: 100%; text-align: center; margin-top: 15px;
-        }
-        #level-tag { font-family: 'Luckiest Guy', cursive; color: var(--gold); font-size: 1.5rem; text-shadow: 0 0 10px rgba(255,204,0,0.5); }
-        #mission-text { font-size: 1rem; font-weight: 900; text-shadow: 0 2px 8px #000; opacity: 0.8; }
-
-        .bottom-hud {
-            position: absolute; bottom: 30px; left: 0; width: 100%;
-            display: flex; flex-direction: column; align-items: center; gap: 10px;
-        }
-        .combo-badge {
-            font-family: 'Luckiest Guy'; color: var(--secondary);
-            font-size: 1.8rem; opacity: 0; transform: translateY(10px);
-        }
-        .progress-wrap {
-            width: 85%; height: 8px; background: rgba(255,255,255,0.05); border-radius: 10px;
-            overflow: hidden; border: 1px solid rgba(255,255,255,0.1);
-        }
-        #level-progress { width: 0%; height: 100%; background: var(--primary); box-shadow: 0 0 10px var(--primary); transition: 0.2s; }
-
         /* Overlays */
-        .overlay-screen {
-            position: fixed; inset: 0; background: rgba(5, 5, 16, 0.98);
-            z-index: 1000; display: flex; flex-direction: column;
-            align-items: center; justify-content: center; text-align: center; padding: 30px;
-        }
-        .game-title { font-family: 'Luckiest Guy', cursive; font-size: clamp(3rem, 10vw, 5rem); color: var(--primary); margin: 0; }
-        .by-text { font-family: 'Rubik', sans-serif; font-weight: 900; color: var(--gold); margin-top: 10px; font-size: 1.5rem; text-transform: uppercase; letter-spacing: 2px; }
-        
-        .play-btn {
-            background: var(--gold); color: #000; border: none;
-            padding: 15px 45px; font-size: 1.8rem; font-family: 'Luckiest Guy', cursive;
-            border-radius: 18px; cursor: pointer; margin-top: 30px;
-            box-shadow: 0 8px 0 #b38f00; transition: 0.1s;
-            pointer-events: auto;
-        }
+        .overlay-screen { position: fixed; inset: 0; background: rgba(5, 5, 16, 0.95); z-index: 1000; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+        .play-btn { background: var(--gold); border: none; padding: 15px 50px; font-size: 2rem; font-family: 'Luckiest Guy'; border-radius: 20px; cursor: pointer; box-shadow: 0 8px 0 #b38f00; pointer-events: auto; transition: 0.1s; }
         .play-btn:active { transform: translateY(4px); box-shadow: 0 4px 0 #b38f00; }
 
-        .floating-text { position: fixed; font-family: 'Luckiest Guy'; pointer-events: none; z-index: 50; }
+        /* Selfie Preview */
+        #selfie-canvas { border: 5px solid var(--gold); border-radius: 15px; max-width: 80%; display: none; margin-bottom: 20px; }
+        .download-btn { background: var(--secondary); margin-top: 10px; }
     </style>
 </head>
 <body>
 
-    <!-- Boot / Start Screen -->
     <div id="boot-screen" class="overlay-screen">
-        <h1 class="game-title">SKOR-HEROES</h1>
-        <p class="by-text">BY ELIAV SKORNICK</p>
-        <p style="margin-top: 20px; color: var(--danger); font-weight: bold; letter-spacing: 1px;">10 SECONDS PER LEVEL • DON'T FAIL</p>
-        <button class="play-btn" onclick="startGame()">START MISSION</button>
+        <h1 style="font-family: 'Luckiest Guy'; font-size: 5rem; color: var(--primary); margin: 0;">SKOR-HEROES</h1>
+        <p style="color: var(--gold); font-weight: 900; font-size: 1.5rem;">BY ELIAV SKORNICK</p>
+        <button class="play-btn" onclick="startGame()">ENTER MISSION</button>
     </div>
 
-    <!-- Win Screen -->
     <div id="win-screen" class="overlay-screen" style="display: none;">
-        <h1 class="game-title" style="color: var(--gold);">MISSION CLEARED!</h1>
-        <p id="win-stats" style="font-size: 1.5rem; margin: 15px 0;"></p>
-        <button class="play-btn" id="next-btn" onclick="nextLevel()">NEXT LEVEL</button>
+        <h1 style="font-family: 'Luckiest Guy'; color: var(--gold); font-size: 3rem;">MISSION COMPLETE!</h1>
+        <canvas id="selfie-canvas"></canvas>
+        <div style="display: flex; gap: 10px;">
+            <button class="play-btn download-btn" onclick="downloadSelfie()">SAVE STORY</button>
+            <button class="play-btn" onclick="nextLevel()">NEXT LEVEL</button>
+        </div>
     </div>
 
-    <!-- Hardcore Fail Screen -->
-    <div id="fail-screen" class="overlay-screen" style="display: none;">
-        <h1 class="game-title" style="color: var(--danger);">GAME OVER</h1>
-        <p style="font-size: 1.5rem; margin-top: 10px;">You failed the time trial!</p>
-        <p style="font-size: 1.1rem; opacity: 0.7;">RESTARTING FROM LEVEL 1</p>
-        <button class="play-btn" onclick="restartFromStart()">RESTART QUEST</button>
-    </div>
-
-    <!-- Hidden Video Feed -->
     <div id="webcam-view"><video id="webcam" autoplay playsinline></video></div>
-    
     <div id="canvas-container"></div>
 
     <div class="game-ui">
-        <div class="top-row">
-            <div class="score-box" id="score-display">0000</div>
-            <div class="timer-container">
-                <svg class="timer-svg">
-                    <circle class="timer-bg" cx="32.5" cy="32.5" r="30"></circle>
-                    <circle id="timer-bar" class="timer-bar" cx="32.5" cy="32.5" r="30"></circle>
-                </svg>
-                <div id="timer-text">10</div>
-            </div>
-        </div>
-
-        <div class="mission-header">
-            <div id="level-tag">LEVEL 1</div>
-            <div id="mission-text">READY?</div>
-        </div>
-
-        <div class="bottom-hud">
-            <div id="combo-ui" class="combo-badge">COMBO X2</div>
-            <div class="progress-wrap">
-                <div id="level-progress"></div>
-            </div>
-        </div>
+        <div class="score-box" id="score-display" style="width: fit-content;">0000</div>
     </div>
 
     <script>
-        let scene, camera, renderer, clock;
+        let scene, camera, renderer, audioCtx, musicOsc;
         let handCursor, handTarget = new THREE.Vector3();
-        let gameItems = [];
-        let isPinching = false;
-        
-        let gameState = {
-            level: 1,
-            score: 0,
-            active: false,
-            timeLeft: 10,
-            maxTime: 10,
-            combo: 0,
-            lastCollectTime: 0,
-            totalItemsInLevel: 0
-        };
+        let gameItems = [], isPinching = false;
+        let gameState = { level: 1, score: 0, active: false };
 
-        // 50 Levels Configuration
-        function getLevelConfig(lvl) {
-            const isBoss = lvl % 5 === 0;
-            const colors = [0x00f2ff, 0xff007a, 0xffcc00, 0x00ff88, 0x7000ff, 0xff5e00, 0x00aaff, 0xff0044];
-            
-            // Scaling items by level
-            const items = isBoss ? 1 : Math.min(6 + Math.floor(lvl / 1.5), 30);
-            const speed = 0.2 + (lvl * 0.05);
-
-            return {
-                title: isBoss ? `BOSS BATTLE ${lvl/5}` : `WORLD ${Math.ceil(lvl/10)}-${lvl % 10 || 10}`,
-                task: isBoss ? "DESTROY THE CORE!" : `POP ${items} TARGETS!`,
-                color: colors[lvl % colors.length],
-                time: 10, // Fixed 10 seconds for all levels
-                items: items,
-                speed: speed,
-                isBoss: isBoss
+        // --- 1. SOUND SYSTEM (Action Music & SFX) ---
+        function initAudio() {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            // Start simple background loop
+            const loop = () => {
+                if(!gameState.active) return;
+                playNote(110, 'sawtooth', 0.5, 0.1); // Bass
+                setTimeout(() => playNote(164, 'sawtooth', 0.5, 0.1), 250);
+                setTimeout(loop, 500);
             };
+            loop();
         }
 
-        let bounds = { x: 180, y: 120 };
+        function playNote(freq, type, dur, vol) {
+            const osc = audioCtx.createOscillator();
+            const g = audioCtx.createGain();
+            osc.type = type; osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+            g.gain.setValueAtTime(vol, audioCtx.currentTime);
+            g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur);
+            osc.connect(g); g.connect(audioCtx.destination);
+            osc.start(); osc.stop(audioCtx.currentTime + dur);
+        }
 
-        function updateBounds() {
-            if (!camera) return;
-            const aspect = window.innerWidth / window.innerHeight;
-            const vFOV = THREE.MathUtils.degToRad(camera.fov);
-            const height = 2 * Math.tan(vFOV / 2) * camera.position.z;
-            const width = height * aspect;
-            bounds.x = (width / 2) * 0.8; 
-            bounds.y = (height / 2) * 0.8;
+        // --- 2. SELFIE SYSTEM ---
+        function captureHeroSelfie() {
+            const video = document.getElementById('webcam');
+            const selfieCanvas = document.getElementById('selfie-canvas');
+            const ctx = selfieCanvas.getContext('2d');
+            
+            selfieCanvas.width = video.videoWidth;
+            selfieCanvas.height = video.videoHeight;
+            
+            // Draw Webcam (Mirrored)
+            ctx.translate(selfieCanvas.width, 0);
+            ctx.scale(-1, 1);
+            ctx.drawImage(video, 0, 0);
+            ctx.setTransform(1, 0, 0, 1, 0, 0);
+            
+            // Add UI Overlays
+            ctx.fillStyle = "#ffcc00";
+            ctx.font = "bold 50px Luckiest Guy";
+            ctx.fillText("SKOR-HEROES", 30, 70);
+            ctx.fillStyle = "white";
+            ctx.font = "40px Rubik";
+            ctx.fillText(`SCORE: ${gameState.score}`, 30, 120);
+            ctx.fillText(`LEVEL ${gameState.level} CLEARED`, 30, 170);
+
+            selfieCanvas.style.display = 'block';
+        }
+
+        function downloadSelfie() {
+            const link = document.createElement('a');
+            link.download = `skor-hero-level${gameState.level}.png`;
+            link.href = document.getElementById('selfie-canvas').toDataURL();
+            link.click();
+        }
+
+        // --- 3. GAME ENGINE ---
+        async function startGame() {
+            document.getElementById('boot-screen').style.display = 'none';
+            initAudio();
+            initThree();
+            
+            const hands = new Hands({ locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}` });
+            hands.setOptions({ maxNumHands: 1, minDetectionConfidence: 0.7 });
+            hands.onResults(onHandResults);
+
+            const video = document.getElementById('webcam');
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            video.srcObject = stream;
+            new Camera(video, { onFrame: async () => await hands.send({image: video}) }).start();
+
+            setupLevel();
         }
 
         function initThree() {
             scene = new THREE.Scene();
-            camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 2000);
-            camera.position.z = 240; 
-
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 1, 1000);
+            camera.position.z = 250;
             renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
             document.getElementById('canvas-container').appendChild(renderer.domElement);
-
-            scene.add(new THREE.AmbientLight(0xffffff, 0.6));
-            const pLight = new THREE.PointLight(0x00f2ff, 2, 1200);
-            pLight.position.set(0, 100, 150);
-            scene.add(pLight);
-
-            const cursorGeo = new THREE.RingGeometry(14, 16, 32);
-            const cursorMat = new THREE.MeshBasicMaterial({ color: 0x00f2ff, transparent: true, opacity: 0.8 });
-            handCursor = new THREE.Mesh(cursorGeo, cursorMat);
+            
+            const cursorGeo = new THREE.TorusGeometry(10, 2, 16, 32);
+            handCursor = new THREE.Mesh(cursorGeo, new THREE.MeshBasicMaterial({ color: 0x00f2ff }));
             scene.add(handCursor);
-
-            updateBounds();
-            clock = new THREE.Clock();
             animate();
         }
 
-        async function startGame() {
-            document.getElementById('boot-screen').style.display = 'none';
-            if(!scene) initThree();
+        function onHandResults(res) {
+            if (!gameState.active || !res.multiHandLandmarks?.[0]) return;
+            const lm = res.multiHandLandmarks[0][8];
+            const thumb = res.multiHandLandmarks[0][4];
             
-            const hands = new Hands({ locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}` });
-            hands.setOptions({ maxNumHands: 1, modelComplexity: 1, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
-            hands.onResults(onHandResults);
+            handTarget.x = (0.5 - lm.x) * 450;
+            handTarget.y = (0.5 - lm.y) * 300;
 
-            const video = document.getElementById('webcam');
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
-                video.srcObject = stream;
-                const cam = new Camera(video, { onFrame: async () => await hands.send({image: video}), width: 640, height: 480 });
-                cam.start();
-            } catch(e) { console.error("Webcam failed", e); }
-
-            setupLevel();
+            const dist = Math.sqrt(Math.pow(lm.x-thumb.x, 2) + Math.pow(lm.y-thumb.y, 2));
+            if(dist < 0.06 && !isPinching) {
+                isPinching = true;
+                triggerShockwave();
+            } else if(dist > 0.1) isPinching = false;
         }
 
-        function onHandResults(res) {
-            if (!gameState.active || !res.multiHandLandmarks) return;
-            if (res.multiHandLandmarks.length > 0) {
-                const lm = res.multiHandLandmarks[0][8]; 
-                handTarget.x = (0.5 - lm.x) * (bounds.x * 2.8); 
-                handTarget.y = (0.5 - lm.y) * (bounds.y * 2.8);
-
-                const thumb = res.multiHandLandmarks[0][4];
-                const dist = Math.sqrt(Math.pow(lm.x-thumb.x, 2) + Math.pow(lm.y-thumb.y, 2));
-                
-                if(dist < 0.08) {
-                    if(!isPinching) checkCollision();
-                    isPinching = true;
-                } else { isPinching = false; }
+        function triggerShockwave() {
+            playNote(600, 'square', 0.1, 0.1); // SFX
+            const wave = new THREE.Mesh(new THREE.RingGeometry(1, 2, 32), new THREE.MeshBasicMaterial({ color: 0x00f2ff, transparent: true }));
+            wave.position.copy(handCursor.position);
+            scene.add(wave);
+            gsap.to(wave.scale, { x: 50, y: 50, duration: 0.3, onComplete: () => scene.remove(wave) });
+            
+            [...gameItems].forEach(item => {
+                if(item.position.distanceTo(handCursor.position) < 60) {
+                    playNote(100, 'sawtooth', 0.3, 0.2); // Hit SFX
+                    gameState.score += 100;
+                    scene.remove(item);
+                    gameItems.splice(gameItems.indexOf(item), 1);
+                }
+            });
+            if(gameItems.length === 0) {
+                gameState.active = false;
+                captureHeroSelfie();
+                document.getElementById('win-screen').style.display = 'flex';
             }
+            document.getElementById('score-display').innerText = gameState.score.toString().padStart(4, '0');
         }
 
         function setupLevel() {
-            const c = getLevelConfig(gameState.level);
-            gameState.maxTime = c.time;
-            gameState.timeLeft = c.time;
             gameState.active = true;
-            gameState.combo = 0;
-            gameState.totalItemsInLevel = c.items;
-            
-            document.getElementById('level-tag').innerText = c.title;
-            document.getElementById('mission-text').innerText = c.task;
-            
-            spawnItems(c);
-            updateUI();
-        }
-
-        function spawnItems(c) {
-            gameItems.forEach(i => scene.remove(i));
-            gameItems = [];
-            
-            for(let i=0; i<c.items; i++) {
-                let geo;
-                if(c.isBoss) {
-                    geo = new THREE.TorusKnotGeometry(32, 10, 128, 16);
-                } else {
-                    const type = (gameState.level + i) % 4;
-                    if(type === 0) geo = new THREE.IcosahedronGeometry(18, 0);
-                    else if(type === 1) geo = new THREE.BoxGeometry(20, 20, 20);
-                    else if(type === 2) geo = new THREE.OctahedronGeometry(18, 0);
-                    else geo = new THREE.TorusGeometry(14, 6, 12, 24);
-                }
-                
-                const mat = new THREE.MeshStandardMaterial({ 
-                    color: c.color, emissive: c.color, emissiveIntensity: 0.6, metalness: 0.9, roughness: 0.1
-                });
-                const mesh = new THREE.Mesh(geo, mat);
-                
-                mesh.position.set(
-                    (Math.random()-0.5) * bounds.x * 1.8,
-                    (Math.random()-0.5) * bounds.y * 1.8,
-                    (Math.random()-0.5) * 40
-                );
-                
-                mesh.userData = { 
-                    offset: Math.random() * Math.PI * 2,
-                    velocity: new THREE.Vector3((Math.random()-0.5)*c.speed, (Math.random()-0.5)*c.speed, 0)
-                };
-                scene.add(mesh);
-                gameItems.push(mesh);
-            }
-        }
-
-        function checkCollision() {
-            gameItems.forEach((item, idx) => {
-                if(item.position.distanceTo(handCursor.position) < 55) {
-                    handleCollect(item, idx);
-                }
-            });
-        }
-
-        function handleCollect(item, idx) {
-            const now = Date.now();
-            if(now - gameState.lastCollectTime < 1100) gameState.combo++;
-            else gameState.combo = 1;
-            gameState.lastCollectTime = now;
-
-            const bonus = gameState.combo * 50;
-            const points = 150 + bonus;
-            gameState.score += points;
-            
-            createExplosion(item.position, item.material.color);
-            showFloatingText(item.position, `+${points}`, gameState.combo > 1);
-            
-            scene.remove(item);
-            gameItems.splice(idx, 1);
-            
-            if(gameItems.length === 0) setTimeout(triggerWin, 300);
-            updateUI();
-        }
-
-        function createExplosion(pos, color) {
-            const count = 18;
-            const geo = new THREE.BoxGeometry(4,4,4);
-            const mat = new THREE.MeshBasicMaterial({ color: color });
-
-            for(let i=0; i<count; i++) {
-                const p = new THREE.Mesh(geo, mat);
-                p.position.copy(pos);
-                scene.add(p);
-                const dest = new THREE.Vector3((Math.random()-0.5)*200, (Math.random()-0.5)*200, (Math.random()-0.5)*200);
-                gsap.to(p.position, { x: "+="+dest.x, y: "+="+dest.y, z: "+="+dest.z, duration: 0.5 });
-                gsap.to(p.scale, { x: 0, y: 0, z: 0, duration: 0.5, onComplete: () => scene.remove(p) });
-            }
-            // Screen Vibration
-            gsap.to(camera.position, { x: (Math.random()-0.5)*20, y: (Math.random()-0.5)*20, duration: 0.05, repeat: 3, yoyo: true, onComplete: () => {
-                camera.position.x = 0; camera.position.y = 0;
-            }});
-        }
-
-        function showFloatingText(pos, text, isCombo) {
-            const div = document.createElement('div');
-            div.className = 'floating-text';
-            div.innerText = text;
-            div.style.color = isCombo ? 'var(--secondary)' : 'white';
-            div.style.fontSize = isCombo ? '3rem' : '1.8rem';
-            document.body.appendChild(div);
-
-            const vector = pos.clone().project(camera);
-            div.style.left = (vector.x + 1) / 2 * window.innerWidth + 'px';
-            div.style.top = -(vector.y - 1) / 2 * window.innerHeight + 'px';
-
-            gsap.to(div, { y: "-=130", opacity: 0, duration: 0.8, onComplete: () => div.remove() });
-        }
-
-        function updateUI() {
-            document.getElementById('score-display').innerText = gameState.score.toString().padStart(4, '0');
-            const comboUI = document.getElementById('combo-ui');
-            if(gameState.combo > 1) {
-                comboUI.innerText = `COMBO X${gameState.combo}!`;
-                gsap.to(comboUI, { opacity: 1, y: 0, duration: 0.2 });
-            } else {
-                gsap.to(comboUI, { opacity: 0, y: 15, duration: 0.2 });
-            }
-            const prog = ((gameState.totalItemsInLevel - gameItems.length) / gameState.totalItemsInLevel) * 100;
-            document.getElementById('level-progress').style.width = prog + "%";
-        }
-
-        function updateTimer() {
-            if(!gameState.active) return;
-            gameState.timeLeft -= 1/60;
-
-            const timerBar = document.getElementById('timer-bar');
-            const timerText = document.getElementById('timer-text');
-            const percent = gameState.timeLeft / gameState.maxTime;
-            
-            timerBar.style.strokeDashoffset = 188 * (1 - percent);
-            timerText.innerText = Math.max(0, Math.ceil(gameState.timeLeft));
-
-            if(percent < 0.4) {
-                timerBar.style.stroke = 'var(--danger)';
-            } else {
-                timerBar.style.stroke = 'var(--primary)';
-            }
-
-            if(gameState.timeLeft <= 0) triggerFail();
-        }
-
-        function triggerWin() {
-            gameState.active = false;
-            document.getElementById('win-stats').innerHTML = `Score: ${gameState.score}<br>Level ${gameState.level} Cleared!`;
-            document.getElementById('win-screen').style.display = 'flex';
-        }
-
-        function triggerFail() {
-            gameState.active = false;
-            document.getElementById('fail-screen').style.display = 'flex';
-        }
-
-        // Hardcore Mode: Reset everything
-        function restartFromStart() {
-            gameState.level = 1;
-            gameState.score = 0;
-            document.getElementById('fail-screen').style.display = 'none';
-            setupLevel();
-        }
-
-        function nextLevel() {
-            gameState.level++;
-            if(gameState.level > 50) {
-                alert("ULTIMATE LEGEND! All 50 levels conquered!");
-                gameState.level = 1;
-                gameState.score = 0;
-            }
             document.getElementById('win-screen').style.display = 'none';
-            setupLevel();
+            for(let i=0; i < 5 + gameState.level; i++) {
+                const m = new THREE.Mesh(new THREE.IcosahedronGeometry(15), new THREE.MeshStandardMaterial({ color: 0xff007a }));
+                m.position.set((Math.random()-0.5)*300, (Math.random()-0.5)*200, 0);
+                scene.add(m);
+                gameItems.push(m);
+            }
+            scene.add(new THREE.PointLight(0xffffff, 1));
         }
+
+        function nextLevel() { gameState.level++; setupLevel(); }
 
         function animate() {
             requestAnimationFrame(animate);
-            const t = clock ? clock.getElapsedTime() : 0;
-            if(gameState.active) updateTimer();
-
             if(handCursor) {
-                handCursor.position.lerp(handTarget, 0.25);
-                handCursor.rotation.z += 0.07;
-                handCursor.scale.setScalar(isPinching ? 1.7 : 1);
+                handCursor.position.lerp(handTarget, 0.2);
+                handCursor.rotation.z += 0.1;
             }
-
-            gameItems.forEach((item, i) => {
-                item.rotation.y += 0.03;
-                item.rotation.x += 0.02;
-                item.position.add(item.userData.velocity);
-                
-                // Keep objects within responsive boundaries
-                if(Math.abs(item.position.x) > bounds.x) item.userData.velocity.x *= -1;
-                if(Math.abs(item.position.y) > bounds.y) item.userData.velocity.y *= -1;
-                
-                item.position.y += Math.sin(t + item.userData.offset) * 0.18;
-            });
-
-            if(renderer) renderer.render(scene, camera);
+            gameItems.forEach(i => i.rotation.y += 0.03);
+            renderer.render(scene, camera);
         }
-
-        window.addEventListener('resize', () => {
-            if(camera) {
-                camera.aspect = window.innerWidth / window.innerHeight;
-                camera.updateProjectionMatrix();
-                renderer.setSize(window.innerWidth, window.innerHeight);
-                updateBounds();
-            }
-        });
     </script>
 </body>
 </html>
-
