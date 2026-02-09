@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Skor-Heroes | Eliav Skornick Ultra-Hardcore</title>
+    <title>Skor-Heroes | Eliav Skornick Precise Edition</title>
     
     <!-- Dependencies -->
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
@@ -30,17 +30,17 @@
             user-select: none; touch-action: none;
         }
 
-        /* מצלמת רפאים ברקע */
+        /* Fullscreen Ghost Camera */
         #webcam-view {
             position: fixed; inset: 0; width: 100vw; height: 100vh;
-            z-index: 0; transform: scaleX(-1); opacity: 0.05;
-            pointer-events: none; filter: brightness(0.5) contrast(1.3);
+            z-index: 0; transform: scaleX(-1); opacity: 0.04;
+            pointer-events: none; filter: brightness(0.5) contrast(1.2);
         }
         video { width: 100%; height: 100%; object-fit: cover; }
 
         #canvas-container { position: absolute; inset: 0; z-index: 2; background: transparent; }
 
-        /* ממשק משתמש */
+        /* Game UI */
         .game-ui {
             position: absolute; inset: 0; z-index: 10;
             pointer-events: none; padding: env(safe-area-inset-top, 20px) 20px 20px 20px;
@@ -65,14 +65,15 @@
         .timer-bar { 
             fill: none; stroke: var(--secondary); stroke-width: 8; 
             stroke-dasharray: 188; stroke-dashoffset: 0;
+            transition: stroke-dashoffset 0.1s linear;
         }
         #timer-text { position: absolute; font-family: 'Luckiest Guy'; font-size: 1.5rem; color: #fff; }
 
-        .mission-header { width: 100%; text-align: center; margin-top: 5px; }
+        .mission-header { width: 100%; text-align: center; margin-top: 10px; }
         #level-tag { font-family: 'Luckiest Guy'; color: var(--gold); font-size: 1.8rem; text-shadow: 0 0 10px rgba(255,204,0,0.5); }
         #mission-text { font-size: 0.85rem; font-weight: 900; color: var(--danger); text-transform: uppercase; letter-spacing: 1px; }
 
-        /* מסכי הודעות */
+        /* Overlay Screens */
         .overlay-screen {
             position: fixed; inset: 0; background: rgba(0, 0, 0, 0.98);
             z-index: 1000; display: flex; flex-direction: column;
@@ -96,28 +97,28 @@
 </head>
 <body>
 
-    <!-- מסך פתיחה -->
+    <!-- Start Screen -->
     <div id="boot-screen" class="overlay-screen">
         <h1 class="game-title">SKOR-HEROES</h1>
         <p class="by-text">BY ELIAV SKORNICK</p>
-        <div style="margin-top: 25px; color: #fff; font-weight: bold;">5 SECONDS • 50 LEVELS • EXTREME SPEED</div>
-        <button class="play-btn" onclick="startGame()">BATTLE!</button>
+        <div style="margin-top: 25px; color: #fff; font-weight: bold;">5s SPEED RUN • PRECISION HITBOXES</div>
+        <button class="play-btn" onclick="startGame()">START</button>
     </div>
 
-    <!-- מסך ניצחון סופי -->
+    <!-- Final Victory Screen -->
     <div id="victory-screen" class="overlay-screen" style="display: none;">
-        <h1 class="game-title" style="color: var(--gold);">ULTIMATE LEGEND</h1>
-        <p style="font-size: 1.5rem; margin: 20px 0;">You conquered all 50 Levels of Hell.</p>
+        <h1 class="game-title" style="color: var(--gold);">TRUE LEGEND</h1>
+        <p style="font-size: 1.5rem; margin: 20px 0;">You conquered all 50 levels!</p>
         <p style="font-family: 'Luckiest Guy'; color: var(--gold); font-size: 1.8rem;">GOLDEN SKIN UNLOCKED</p>
         <button class="play-btn" onclick="enterGodMode()">GOD MODE</button>
     </div>
 
-    <!-- מסך כישלון (Hardcore Reset) -->
+    <!-- Fail Screen -->
     <div id="fail-screen" class="overlay-screen" style="display: none;">
         <h1 class="game-title" style="color: var(--danger);">TERMINATED</h1>
         <p id="fail-reason" class="fail-msg">TIME EXPIRED</p>
-        <p style="opacity: 0.6; margin-top: 20px;">Hardcore Mode: Restarting from Level 1</p>
-        <button class="play-btn" onclick="restartFromStart()">RESTART</button>
+        <p style="opacity: 0.6; margin-top: 20px;">Hardcore Reset: Returning to Level 1</p>
+        <button class="play-btn" onclick="restartFromStart()">REBOOT</button>
     </div>
 
     <div id="webcam-view"><video id="webcam" autoplay playsinline></video></div>
@@ -136,7 +137,7 @@
         </div>
         <div class="mission-header">
             <div id="level-tag">LEVEL 1</div>
-            <div id="mission-text">STAY FOCUSED</div>
+            <div id="mission-text">FOCUS ON TARGETS</div>
         </div>
     </div>
 
@@ -148,52 +149,40 @@
         let safeBounds = { x: 50, y: 50 };
         
         let gameState = {
-            level: 1, score: 0, active: false, timeLeft: 5, totalItems: 0
+            level: 1, score: 0, active: false, timeLeft: 5
         };
 
-        // חישוב גבולות גזרה בטוחים למניעת יציאת מטרות מהמסך (במיוחד בטלפון)
         function updateSafeBounds() {
             if (!camera) return;
             const aspect = window.innerWidth / window.innerHeight;
             const vFOV = THREE.MathUtils.degToRad(camera.fov);
             const height = 2 * Math.tan(vFOV / 2) * camera.position.z;
             const width = height * aspect;
-            
-            // שימוש ב-70% מהשטח הראוי כדי להבטיח נראות מלאה
-            safeBounds.x = (width / 2) * 0.7;
-            safeBounds.y = (height / 2) * 0.7;
+            safeBounds.x = (width / 2) * 0.75;
+            safeBounds.y = (height / 2) * 0.75;
         }
 
-        // מחולל גיאומטריות - כל שלב צורה אחרת
         function getGeometry(lvl, idx) {
             const types = [
                 () => new THREE.IcosahedronGeometry(18, 0),
                 () => new THREE.BoxGeometry(20, 20, 20),
                 () => new THREE.TorusGeometry(14, 5, 12, 24),
                 () => new THREE.OctahedronGeometry(18, 0),
-                () => new THREE.DodecahedronGeometry(16, 0),
-                () => new THREE.TetrahedronGeometry(20, 0),
-                () => new THREE.SphereGeometry(18, 16, 16)
+                () => new THREE.DodecahedronGeometry(16, 0)
             ];
-            const typeIndex = (lvl + idx) % types.length;
-            return types[typeIndex]();
+            return types[(lvl + idx) % types.length]();
         }
 
         function getLevelConfig(lvl) {
             const isBoss = lvl % 5 === 0;
-            const colors = [0x00f2ff, 0xff007a, 0xffcc00, 0x00ff88, 0x7000ff, 0xff5e00, 0x00aaff, 0xff0044];
-            
-            // קושי אגרסיבי: פי 2 יותר קשה בכל שלב (במהירות ובכמות)
-            const baseItems = 3;
-            const items = isBoss ? 1 : Math.min(baseItems + Math.floor(lvl * 0.8), 35);
-            const speed = 0.3 + (lvl * 0.15); // מהירות עולה משמעותית
-            const mineCount = lvl < 4 ? 0 : Math.min(Math.floor(lvl / 2), 15);
-
+            const items = isBoss ? 1 : Math.min(4 + Math.floor(lvl / 1.6), 30);
+            const speed = 0.25 + (lvl * 0.12);
+            const mines = lvl < 4 ? 0 : Math.min(Math.floor(lvl / 3), 12);
             return {
-                title: isBoss ? `BOSS FIGHT ${lvl/5}` : `ZONE ${Math.ceil(lvl/10)}-${lvl%10||10}`,
-                task: isBoss ? "DESTROY THE CORE!" : `POP ${items} TARGETS!`,
-                color: colors[lvl % colors.length],
-                items, speed, mineCount, isBoss
+                title: isBoss ? `BOSS FIGHT ${lvl/5}` : `WORLD ${Math.ceil(lvl/10)}-${lvl%10||10}`,
+                task: lvl % 2 === 0 ? "WATCH THE MINES!" : "STAY FAST!",
+                color: new THREE.Color().setHSL((lvl * 0.13) % 1, 0.8, 0.5),
+                items, speed, mines, isBoss
             };
         }
 
@@ -201,23 +190,19 @@
             scene = new THREE.Scene();
             camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 2000);
             camera.position.z = 250;
-            
             renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
             document.getElementById('canvas-container').appendChild(renderer.domElement);
-
-            scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+            scene.add(new THREE.AmbientLight(0xffffff, 0.6));
             const pLight = new THREE.PointLight(0x00f2ff, 2.5, 1000);
             pLight.position.set(0, 100, 200);
             scene.add(pLight);
-
             handCursor = new THREE.Mesh(
                 new THREE.TorusGeometry(14, 2, 16, 32),
                 new THREE.MeshBasicMaterial({ color: 0x00f2ff, transparent: true, opacity: 0.8 })
             );
             scene.add(handCursor);
-
             updateSafeBounds();
             clock = new THREE.Clock();
             animate();
@@ -240,8 +225,8 @@
             if (!gameState.active || !res.multiHandLandmarks) return;
             const lm = res.multiHandLandmarks[0];
             if(lm) {
-                handTarget.x = (0.5 - lm[8].x) * (safeBounds.x * 2.8); 
-                handTarget.y = (0.5 - lm[8].y) * (safeBounds.y * 2.8);
+                handTarget.x = (0.5 - lm[8].x) * (safeBounds.x * 2.7); 
+                handTarget.y = (0.5 - lm[8].y) * (safeBounds.y * 2.7);
                 const thumb = lm[4];
                 const dist = Math.sqrt(Math.pow(lm[8].x-thumb.x, 2) + Math.pow(lm[8].y-thumb.y, 2));
                 if(dist < 0.08) { if(!isPinching) checkCollision(); isPinching = true; } else isPinching = false;
@@ -251,20 +236,20 @@
         function spawnEntities(c) {
             targets.concat(obstacles).forEach(e => scene.remove(e));
             targets = []; obstacles = [];
-
             for(let i=0; i<c.items; i++) {
-                const geo = c.isBoss ? new THREE.TorusKnotGeometry(35, 12, 128, 16) : getGeometry(gameState.level, i);
+                const geo = c.isBoss ? new THREE.TorusKnotGeometry(35, 12, 100, 16) : getGeometry(gameState.level, i);
                 const mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: c.color, emissive: c.color, emissiveIntensity: 0.5 }));
                 mesh.position.set((Math.random()-0.5)*safeBounds.x*1.8, (Math.random()-0.5)*safeBounds.y*1.8, 0);
-                mesh.userData = { vel: new THREE.Vector3((Math.random()-0.5)*c.speed, (Math.random()-0.5)*c.speed, 0), shrink: gameState.level > 15 };
+                mesh.userData = { vel: new THREE.Vector3((Math.random()-0.5)*c.speed, (Math.random()-0.5)*c.speed, 0) };
                 scene.add(mesh); targets.push(mesh);
             }
-
             if(!godMode) {
-                for(let i=0; i<c.mineCount; i++) {
+                for(let i=0; i<c.mines; i++) {
                     const mesh = new THREE.Mesh(new THREE.OctahedronGeometry(15, 0), new THREE.MeshStandardMaterial({ color: 0xff0000, emissive: 0xff0000 }));
                     mesh.position.set((Math.random()-0.5)*safeBounds.x*1.8, (Math.random()-0.5)*safeBounds.y*1.8, 0);
-                    mesh.userData = { vel: new THREE.Vector3((Math.random()-0.5)*c.speed*1.4, (Math.random()-0.5)*c.speed*1.4, 0), mine: true };
+                    // Ensure mine isn't right on top of cursor start
+                    if(mesh.position.distanceTo(handCursor.position) < 80) mesh.position.x += 100;
+                    mesh.userData = { vel: new THREE.Vector3((Math.random()-0.5)*c.speed*1.3, (Math.random()-0.5)*c.speed*1.3, 0), mine: true };
                     scene.add(mesh); obstacles.push(mesh);
                 }
             }
@@ -273,16 +258,17 @@
         function setupLevel() {
             updateSafeBounds();
             const c = getLevelConfig(gameState.level);
-            gameState.timeLeft = 5; // 5 שניות לכל שלב
+            gameState.timeLeft = 5;
             gameState.active = true;
-            document.getElementById('level-tag').innerText = `LEVEL ${gameState.level}`;
+            document.getElementById('level-tag').innerText = c.title;
             document.getElementById('mission-text').innerText = c.task;
             spawnEntities(c);
         }
 
         function checkCollision() {
+            // Precise target radius: 50
             targets.forEach((t, i) => {
-                if(t.position.distanceTo(handCursor.position) < 55) {
+                if(t.position.distanceTo(handCursor.position) < 50) {
                     targets.splice(i, 1); scene.remove(t);
                     gameState.score += 150;
                     if(targets.length === 0) {
@@ -291,8 +277,11 @@
                     }
                 }
             });
+            // TIGHT mine radius: 22 (Used to be 40!)
             obstacles.forEach(o => {
-                if(o.position.distanceTo(handCursor.position) < 40) triggerFail("MINE DETONATED!");
+                if(o.position.distanceTo(handCursor.position) < 22) {
+                    triggerFail("MINE DETONATED!");
+                }
             });
         }
 
@@ -335,21 +324,17 @@
                 document.getElementById('timer-text').innerText = Math.max(0, Math.ceil(gameState.timeLeft));
                 if(gameState.timeLeft <= 0) triggerFail("TIME EXPIRED!");
             }
-
             if(handCursor) {
                 handCursor.position.lerp(handTarget, 0.25);
                 handCursor.rotation.z += 0.08;
                 if(isLegend) handCursor.scale.setScalar(1.5 + Math.sin(Date.now()*0.01)*0.2);
             }
-
             [...targets, ...obstacles].forEach(e => {
                 e.position.add(e.userData.vel);
                 if(Math.abs(e.position.x) > safeBounds.x) e.userData.vel.x *= -1;
                 if(Math.abs(e.position.y) > safeBounds.y) e.userData.vel.y *= -1;
-                e.rotation.x += 0.04; e.rotation.y += 0.04;
-                if(e.userData.shrink && gameState.active) e.scale.multiplyScalar(0.995);
+                e.rotation.x += 0.03; e.rotation.y += 0.03;
             });
-
             renderer.render(scene, camera);
             document.getElementById('score-display').innerText = gameState.score.toString().padStart(4, '0');
         }
