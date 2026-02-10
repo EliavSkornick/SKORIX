@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Skor-Heroes | Eliav Skornick Precise Edition</title>
+    <title>Skor-Heroes | Eliav Skornick Economy Edition</title>
     
     <!-- Dependencies -->
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
@@ -21,6 +21,7 @@
             --gold: #ffcc00;
             --bg: #010105;
             --danger: #ff0000;
+            --success: #00ff88;
         }
 
         body, html {
@@ -30,7 +31,6 @@
             user-select: none; touch-action: none;
         }
 
-        /* Fullscreen Ghost Camera */
         #webcam-view {
             position: fixed; inset: 0; width: 100vw; height: 100vh;
             z-index: 0; transform: scaleX(-1); opacity: 0.04;
@@ -40,85 +40,159 @@
 
         #canvas-container { position: absolute; inset: 0; z-index: 2; background: transparent; }
 
-        /* Game UI */
         .game-ui {
             position: absolute; inset: 0; z-index: 10;
             pointer-events: none; padding: env(safe-area-inset-top, 20px) 20px 20px 20px;
             display: flex; flex-direction: column;
         }
 
-        .top-row { display: flex; justify-content: space-between; align-items: center; width: 100%; }
+        .top-row { display: flex; justify-content: space-between; align-items: flex-start; width: 100%; }
         
+        .stats-group { display: flex; flex-direction: column; gap: 8px; }
+
         .score-box {
-            background: rgba(0,0,0,0.9); border: 2.5px solid var(--primary);
-            padding: 8px 18px; border-radius: 50px;
-            font-family: 'Luckiest Guy', cursive; font-size: 1.5rem;
-            box-shadow: 0 0 15px var(--primary);
+            background: rgba(0,0,0,0.9); border: 2px solid var(--primary);
+            padding: 5px 15px; border-radius: 50px;
+            font-family: 'Luckiest Guy', cursive; font-size: 1.3rem;
+            box-shadow: 0 0 10px var(--primary);
         }
+
+        /* Coins HUD */
+        .coins-box {
+            background: rgba(0,0,0,0.9); border: 2px solid var(--gold);
+            padding: 5px 15px; border-radius: 50px;
+            font-family: 'Luckiest Guy', cursive; font-size: 1.3rem;
+            display: flex; align-items: center; gap: 8px;
+            box-shadow: 0 0 10px var(--gold);
+            pointer-events: auto; cursor: pointer;
+        }
+        .coin-icon { color: var(--gold); font-size: 1.5rem; }
+
+        .lives-container { display: flex; gap: 5px; font-size: 1.2rem; }
+        .heart { color: var(--secondary); text-shadow: 0 0 8px var(--secondary); }
+        .heart.lost { opacity: 0.2; }
 
         .timer-container {
-            position: relative; width: 65px; height: 65px;
+            position: relative; width: 55px; height: 55px;
             display: flex; align-items: center; justify-content: center;
         }
-        .timer-svg { transform: rotate(-90deg); width: 65px; height: 65px; }
-        .timer-bg { fill: none; stroke: rgba(255,255,255,0.05); stroke-width: 8; }
+        .timer-svg { transform: rotate(-90deg); width: 55px; height: 55px; }
         .timer-bar { 
-            fill: none; stroke: var(--secondary); stroke-width: 8; 
-            stroke-dasharray: 188; stroke-dashoffset: 0;
+            fill: none; stroke: var(--secondary); stroke-width: 6; 
+            stroke-dasharray: 157; stroke-dashoffset: 0;
             transition: stroke-dashoffset 0.1s linear;
         }
-        #timer-text { position: absolute; font-family: 'Luckiest Guy'; font-size: 1.5rem; color: #fff; }
+        #timer-text { position: absolute; font-family: 'Luckiest Guy'; font-size: 1.1rem; }
 
-        .mission-header { width: 100%; text-align: center; margin-top: 10px; }
-        #level-tag { font-family: 'Luckiest Guy'; color: var(--gold); font-size: 1.8rem; text-shadow: 0 0 10px rgba(255,204,0,0.5); }
-        #mission-text { font-size: 0.85rem; font-weight: 900; color: var(--danger); text-transform: uppercase; letter-spacing: 1px; }
+        .mission-header { width: 100%; text-align: center; margin-top: 5px; }
+        #level-tag { font-family: 'Luckiest Guy'; color: var(--gold); font-size: 1.4rem; }
 
-        /* Overlay Screens */
+        /* Overlays */
         .overlay-screen {
             position: fixed; inset: 0; background: rgba(0, 0, 0, 0.98);
             z-index: 1000; display: flex; flex-direction: column;
-            align-items: center; justify-content: center; text-align: center; padding: 30px;
+            align-items: center; justify-content: center; text-align: center; padding: 25px;
         }
-        .game-title { font-family: 'Luckiest Guy'; font-size: clamp(3rem, 15vw, 6rem); color: var(--primary); margin: 0; }
-        .by-text { font-family: 'Rubik'; font-weight: 900; color: var(--gold); margin-top: 5px; font-size: 1.2rem; letter-spacing: 3px; }
+        .game-title { font-family: 'Luckiest Guy'; font-size: 3.5rem; color: var(--primary); margin: 0; }
         
         .play-btn {
             background: var(--gold); color: #000; border: none;
-            padding: 15px 45px; font-size: 2rem; font-family: 'Luckiest Guy';
-            border-radius: 20px; cursor: pointer; margin-top: 30px;
-            box-shadow: 0 10px 0 #b38f00; pointer-events: auto;
+            padding: 12px 35px; font-size: 1.6rem; font-family: 'Luckiest Guy';
+            border-radius: 15px; cursor: pointer; margin-top: 20px;
+            box-shadow: 0 6px 0 #b38f00; pointer-events: auto;
         }
-        .play-btn:active { transform: translateY(5px); box-shadow: 0 5px 0 #b38f00; }
+        .skip-btn {
+            background: var(--success); color: #000; border: none;
+            padding: 12px 35px; font-size: 1.4rem; font-family: 'Luckiest Guy';
+            border-radius: 15px; cursor: pointer; margin-top: 10px;
+            box-shadow: 0 6px 0 #009955; pointer-events: auto;
+            display: flex; align-items: center; gap: 10px;
+        }
+        .skip-btn:disabled { background: #555; box-shadow: 0 6px 0 #333; opacity: 0.6; cursor: not-allowed; }
 
-        .fail-msg { color: var(--danger); font-size: 1.5rem; font-weight: 900; margin-top: 10px; }
+        /* Shop Modal */
+        #shop-screen { display: none; }
+        .shop-container {
+            background: #111; border: 3px solid var(--gold); padding: 30px;
+            border-radius: 25px; width: 85%; max-width: 400px;
+        }
+        .shop-item {
+            background: rgba(255,255,255,0.05); margin: 10px 0; padding: 15px;
+            border-radius: 15px; display: flex; justify-content: space-between; align-items: center;
+            border: 1px solid rgba(255,204,0,0.2);
+        }
 
-        .floating-text { position: fixed; font-family: 'Luckiest Guy'; pointer-events: none; z-index: 50; }
+        .floating-coin {
+            position: fixed; pointer-events: none; z-index: 100;
+            color: var(--gold); font-family: 'Luckiest Guy'; font-size: 1.5rem;
+        }
     </style>
 </head>
 <body>
 
-    <!-- Start Screen -->
+    <!-- מסך פתיחה -->
     <div id="boot-screen" class="overlay-screen">
         <h1 class="game-title">SKOR-HEROES</h1>
-        <p class="by-text">BY ELIAV SKORNICK</p>
-        <div style="margin-top: 25px; color: #fff; font-weight: bold;">5s SPEED RUN • PRECISION HITBOXES</div>
-        <button class="play-btn" onclick="startGame()">START</button>
+        <p style="font-weight: 900; color: var(--gold); font-size: 1.2rem; letter-spacing: 2px;">BY ELIAV SKORNICK</p>
+        <div style="margin-top: 20px; font-size: 0.9rem; opacity: 0.8;">
+            3 LIVES • CHECKPOINTS EVERY 10 LEVELS<br>
+            EARN 100 COINS EVERY WORLD TO SKIP!
+        </div>
+        <button class="play-btn" onclick="startGame()">START MISSION</button>
     </div>
 
-    <!-- Final Victory Screen -->
-    <div id="victory-screen" class="overlay-screen" style="display: none;">
-        <h1 class="game-title" style="color: var(--gold);">TRUE LEGEND</h1>
-        <p style="font-size: 1.5rem; margin: 20px 0;">You conquered all 50 levels!</p>
-        <p style="font-family: 'Luckiest Guy'; color: var(--gold); font-size: 1.8rem;">GOLDEN SKIN UNLOCKED</p>
-        <button class="play-btn" onclick="enterGodMode()">GOD MODE</button>
+    <!-- חנות מטבעות -->
+    <div id="shop-screen" class="overlay-screen">
+        <div class="shop-container">
+            <h2 style="color: var(--gold); font-family: 'Luckiest Guy'; font-size: 2.5rem; margin-top: 0;">COIN SHOP</h2>
+            <div class="shop-item">
+                <span>100 COINS</span>
+                <button class="play-btn" style="margin:0; padding: 5px 15px; font-size: 1rem;" onclick="buyCoins(100)">$1.99</button>
+            </div>
+            <div class="shop-item">
+                <span>500 COINS</span>
+                <button class="play-btn" style="margin:0; padding: 5px 15px; font-size: 1rem;" onclick="buyCoins(500)">$4.99</button>
+            </div>
+            <div class="shop-item" style="border: 2px solid var(--primary);">
+                <span style="color: var(--primary)">LEGEND PACK (1500)</span>
+                <button class="play-btn" style="margin:0; padding: 5px 15px; font-size: 1rem; background: var(--primary)" onclick="buyCoins(1500)">$9.99</button>
+            </div>
+            <button class="play-btn" style="background: #333; box-shadow: none; width: 100%;" onclick="closeShop()">CLOSE</button>
+        </div>
     </div>
 
-    <!-- Fail Screen -->
+    <!-- מסך איבוד חיים -->
+    <div id="life-lost-screen" class="overlay-screen" style="display: none;">
+        <h1 class="game-title" style="color: var(--secondary);">LIFE LOST</h1>
+        <p id="lives-left-msg" style="margin-top: 10px;">2 Lives Remaining</p>
+        
+        <button class="play-btn" onclick="retryLevel()">TRY AGAIN</button>
+        
+        <div style="margin: 15px 0; opacity: 0.5;">— OR —</div>
+        
+        <button id="skip-btn-life" class="skip-btn" onclick="useSkip()">
+            SKIP LEVEL <span style="background: rgba(0,0,0,0.2); padding: 2px 8px; border-radius: 10px;">🪙 100</span>
+        </button>
+    </div>
+
+    <!-- מסך Game Over -->
     <div id="fail-screen" class="overlay-screen" style="display: none;">
-        <h1 class="game-title" style="color: var(--danger);">TERMINATED</h1>
-        <p id="fail-reason" class="fail-msg">TIME EXPIRED</p>
-        <p style="opacity: 0.6; margin-top: 20px;">Hardcore Reset: Returning to Level 1</p>
-        <button class="play-btn" onclick="restartFromStart()">REBOOT</button>
+        <h1 class="game-title" style="color: #ff0000;">GAME OVER</h1>
+        <p id="checkpoint-info" style="color: var(--primary); margin-top: 10px;">Returning to World Start</p>
+        
+        <button class="play-btn" onclick="restartFromCheckpoint()">RESTART WORLD</button>
+        
+        <div style="margin: 15px 0; opacity: 0.5;">— OR —</div>
+
+        <button id="skip-btn-fail" class="skip-btn" onclick="useSkip()">
+            SKIP LEVEL <span style="background: rgba(0,0,0,0.2); padding: 2px 8px; border-radius: 10px;">🪙 100</span>
+        </button>
+    </div>
+
+    <div id="victory-screen" class="overlay-screen" style="display: none;">
+        <h1 class="game-title" style="color: var(--gold);">ULTIMATE LEGEND</h1>
+        <p>50 Levels Conquered.</p>
+        <button class="play-btn" onclick="enterGodMode()">GOD MODE</button>
     </div>
 
     <div id="webcam-view"><video id="webcam" autoplay playsinline></video></div>
@@ -126,86 +200,76 @@
 
     <div class="game-ui">
         <div class="top-row">
-            <div class="score-box" id="score-display">0000</div>
+            <div class="stats-group">
+                <div class="score-box" id="score-display">0000</div>
+                <div class="coins-box" onclick="openShop()">
+                    <span class="coin-icon">🪙</span>
+                    <span id="coins-display">0</span>
+                    <span style="color: var(--gold); margin-left: 5px; font-size: 1rem;">+</span>
+                </div>
+                <div class="lives-container" id="lives-ui">
+                    <span class="heart">❤</span><span class="heart">❤</span><span class="heart">❤</span>
+                </div>
+            </div>
             <div class="timer-container">
                 <svg class="timer-svg">
-                    <circle class="timer-bg" cx="32.5" cy="32.5" r="30"></circle>
-                    <circle id="timer-bar" class="timer-bar" cx="32.5" cy="32.5" r="30"></circle>
+                    <circle class="timer-bg" cx="27.5" cy="27.5" r="25" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="6"></circle>
+                    <circle id="timer-bar" class="timer-bar" cx="27.5" cy="27.5" r="25"></circle>
                 </svg>
                 <div id="timer-text">5</div>
             </div>
         </div>
         <div class="mission-header">
             <div id="level-tag">LEVEL 1</div>
-            <div id="mission-text">FOCUS ON TARGETS</div>
         </div>
     </div>
 
     <script>
-        let scene, camera, renderer, clock;
-        let handCursor, handTarget = new THREE.Vector3();
-        let targets = [], obstacles = [];
+        let scene, camera, renderer, clock, handCursor;
+        let targets = [], obstacles = [], neuralThreads = [];
+        let handTarget = new THREE.Vector3();
         let isPinching = false, godMode = false, isLegend = false;
         let safeBounds = { x: 50, y: 50 };
         
-        let gameState = {
-            level: 1, score: 0, active: false, timeLeft: 5
+        let gameState = { 
+            level: 1, 
+            checkpointLevel: 1, 
+            lives: 3,
+            score: 0, 
+            coins: 0,
+            active: false, 
+            timeLeft: 5 
         };
 
         function updateSafeBounds() {
             if (!camera) return;
             const aspect = window.innerWidth / window.innerHeight;
-            const vFOV = THREE.MathUtils.degToRad(camera.fov);
-            const height = 2 * Math.tan(vFOV / 2) * camera.position.z;
-            const width = height * aspect;
-            safeBounds.x = (width / 2) * 0.75;
-            safeBounds.y = (height / 2) * 0.75;
-        }
-
-        function getGeometry(lvl, idx) {
-            const types = [
-                () => new THREE.IcosahedronGeometry(18, 0),
-                () => new THREE.BoxGeometry(20, 20, 20),
-                () => new THREE.TorusGeometry(14, 5, 12, 24),
-                () => new THREE.OctahedronGeometry(18, 0),
-                () => new THREE.DodecahedronGeometry(16, 0)
-            ];
-            return types[(lvl + idx) % types.length]();
-        }
-
-        function getLevelConfig(lvl) {
-            const isBoss = lvl % 5 === 0;
-            const items = isBoss ? 1 : Math.min(4 + Math.floor(lvl / 1.6), 30);
-            const speed = 0.25 + (lvl * 0.12);
-            const mines = lvl < 4 ? 0 : Math.min(Math.floor(lvl / 3), 12);
-            return {
-                title: isBoss ? `BOSS FIGHT ${lvl/5}` : `WORLD ${Math.ceil(lvl/10)}-${lvl%10||10}`,
-                task: lvl % 2 === 0 ? "WATCH THE MINES!" : "STAY FAST!",
-                color: new THREE.Color().setHSL((lvl * 0.13) % 1, 0.8, 0.5),
-                items, speed, mines, isBoss
-            };
+            const h = 2 * Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2) * camera.position.z;
+            safeBounds.x = (h * aspect / 2) * 0.75;
+            safeBounds.y = (h / 2) * 0.75;
         }
 
         function initThree() {
             scene = new THREE.Scene();
-            camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 2000);
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 1, 2000);
             camera.position.z = 250;
             renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
             document.getElementById('canvas-container').appendChild(renderer.domElement);
-            scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+            scene.add(new THREE.AmbientLight(0xffffff, 0.4));
             const pLight = new THREE.PointLight(0x00f2ff, 2.5, 1000);
             pLight.position.set(0, 100, 200);
             scene.add(pLight);
+
             handCursor = new THREE.Mesh(
-                new THREE.TorusGeometry(14, 2, 16, 32),
+                new THREE.TorusGeometry(12, 2.5, 16, 32),
                 new THREE.MeshBasicMaterial({ color: 0x00f2ff, transparent: true, opacity: 0.8 })
             );
             scene.add(handCursor);
             updateSafeBounds();
             clock = new THREE.Clock();
-            animate();
+            requestAnimationFrame(animate);
         }
 
         async function startGame() {
@@ -225,94 +289,162 @@
             if (!gameState.active || !res.multiHandLandmarks) return;
             const lm = res.multiHandLandmarks[0];
             if(lm) {
-                handTarget.x = (0.5 - lm[8].x) * (safeBounds.x * 2.7); 
-                handTarget.y = (0.5 - lm[8].y) * (safeBounds.y * 2.7);
-                const thumb = lm[4];
-                const dist = Math.sqrt(Math.pow(lm[8].x-thumb.x, 2) + Math.pow(lm[8].y-thumb.y, 2));
+                handTarget.x = (0.5 - lm[8].x) * (safeBounds.x * 2.8); 
+                handTarget.y = (0.5 - lm[8].y) * (safeBounds.y * 2.8);
+                const dist = Math.sqrt(Math.pow(lm[8].x-lm[4].x, 2) + Math.pow(lm[8].y-thumbFix(lm[4].y), 2));
                 if(dist < 0.08) { if(!isPinching) checkCollision(); isPinching = true; } else isPinching = false;
             }
         }
+        function thumbFix(y) { return y; } // Helper for mapping
 
-        function spawnEntities(c) {
+        function spawnEntities(lvl) {
             targets.concat(obstacles).forEach(e => scene.remove(e));
-            targets = []; obstacles = [];
-            for(let i=0; i<c.items; i++) {
-                const geo = c.isBoss ? new THREE.TorusKnotGeometry(35, 12, 100, 16) : getGeometry(gameState.level, i);
-                const mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: c.color, emissive: c.color, emissiveIntensity: 0.5 }));
-                mesh.position.set((Math.random()-0.5)*safeBounds.x*1.8, (Math.random()-0.5)*safeBounds.y*1.8, 0);
-                mesh.userData = { vel: new THREE.Vector3((Math.random()-0.5)*c.speed, (Math.random()-0.5)*c.speed, 0) };
-                scene.add(mesh); targets.push(mesh);
+            neuralThreads.forEach(t => scene.remove(t));
+            targets = []; obstacles = []; neuralThreads = [];
+
+            // Checkpoint Logic & World Bonus
+            if (lvl > 1 && (lvl - 1) % 10 === 0 && gameState.checkpointLevel < lvl) {
+                gameState.checkpointLevel = lvl;
+                addCoins(100, true); // World Completion Bonus
             }
+
+            const isBoss = lvl % 5 === 0;
+            const count = isBoss ? 1 : Math.min(4 + Math.floor(lvl / 1.5), 30);
+            const mines = lvl < 4 ? 0 : Math.min(Math.floor(lvl / 3.5), 12);
+            const speed = 0.25 + (lvl * 0.12);
+            const color = new THREE.Color().setHSL((lvl * 0.13) % 1, 0.8, 0.5);
+
+            for(let i=0; i<count; i++) {
+                const geo = isBoss ? new THREE.TorusKnotGeometry(35, 12, 128, 16) : new THREE.IcosahedronGeometry(18, 0);
+                const mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 0.5 }));
+                mesh.position.set((Math.random()-0.5)*safeBounds.x*1.8, (Math.random()-0.5)*safeBounds.y*1.8, 0);
+                mesh.userData = { vel: new THREE.Vector3((Math.random()-0.5)*speed, (Math.random()-0.5)*speed, 0) };
+                scene.add(mesh); targets.push(mesh);
+
+                const lineGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);
+                const line = new THREE.Line(lineGeo, new THREE.LineBasicMaterial({ color: 0x00f2ff, transparent: true, opacity: 0.15 }));
+                scene.add(line);
+                neuralThreads.push({ line, target: mesh });
+            }
+
             if(!godMode) {
-                for(let i=0; i<c.mines; i++) {
-                    const mesh = new THREE.Mesh(new THREE.OctahedronGeometry(15, 0), new THREE.MeshStandardMaterial({ color: 0xff0000, emissive: 0xff0000 }));
+                for(let i=0; i<mines; i++) {
+                    const mesh = new THREE.Mesh(new THREE.OctahedronGeometry(15, 0), new THREE.MeshStandardMaterial({ color: 0xff0000 }));
                     mesh.position.set((Math.random()-0.5)*safeBounds.x*1.8, (Math.random()-0.5)*safeBounds.y*1.8, 0);
-                    // Ensure mine isn't right on top of cursor start
-                    if(mesh.position.distanceTo(handCursor.position) < 80) mesh.position.x += 100;
-                    mesh.userData = { vel: new THREE.Vector3((Math.random()-0.5)*c.speed*1.3, (Math.random()-0.5)*c.speed*1.3, 0), mine: true };
+                    mesh.userData = { vel: new THREE.Vector3((Math.random()-0.5)*speed*1.2, (Math.random()-0.5)*speed*1.2, 0), mine: true };
                     scene.add(mesh); obstacles.push(mesh);
                 }
             }
         }
 
+        function addCoins(amount, isWorldBonus) {
+            gameState.coins += amount;
+            document.getElementById('coins-display').innerText = gameState.coins;
+            if(isWorldBonus) {
+                showWorldBonusMsg();
+            }
+        }
+
+        function showWorldBonusMsg() {
+            const div = document.createElement('div');
+            div.style.position = 'fixed';
+            div.style.top = '50%'; div.style.left = '50%'; div.style.transform = 'translate(-50%, -50%)';
+            div.style.color = 'var(--gold)'; div.style.fontFamily = 'Luckiest Guy'; div.style.fontSize = '2rem';
+            div.style.zIndex = '1001'; div.innerText = "WORLD BONUS: +100 COINS!";
+            document.body.appendChild(div);
+            gsap.from(div, { scale: 0, opacity: 0, duration: 0.5, ease: "back.out" });
+            gsap.to(div, { y: "-=100", opacity: 0, duration: 1, delay: 1.5, onComplete: () => div.remove() });
+        }
+
         function setupLevel() {
             updateSafeBounds();
-            const c = getLevelConfig(gameState.level);
             gameState.timeLeft = 5;
             gameState.active = true;
-            document.getElementById('level-tag').innerText = c.title;
-            document.getElementById('mission-text').innerText = c.task;
-            spawnEntities(c);
+            document.getElementById('level-tag').innerText = `LEVEL ${gameState.level}`;
+            updateLivesUI();
+            spawnEntities(gameState.level);
         }
 
         function checkCollision() {
-            // Precise target radius: 50
             targets.forEach((t, i) => {
                 if(t.position.distanceTo(handCursor.position) < 50) {
-                    targets.splice(i, 1); scene.remove(t);
+                    targets.splice(i, 1);
+                    const tIdx = neuralThreads.findIndex(th => th.target === t);
+                    if(tIdx !== -1) { scene.remove(neuralThreads[tIdx].line); neuralThreads.splice(tIdx, 1); }
+                    scene.remove(t);
                     gameState.score += 150;
+                    createExplosion(t.position, t.material.color);
                     if(targets.length === 0) {
-                        if(gameState.level === 50) triggerUltimateVictory();
-                        else nextLevel();
+                        if(gameState.level === 50) triggerVictory();
+                        else { gameState.level++; setupLevel(); }
                     }
                 }
             });
-            // TIGHT mine radius: 22 (Used to be 40!)
             obstacles.forEach(o => {
-                if(o.position.distanceTo(handCursor.position) < 22) {
-                    triggerFail("MINE DETONATED!");
-                }
+                if(o.position.distanceTo(handCursor.position) < 22) triggerFail("MINE DETONATED");
             });
-        }
-
-        function triggerUltimateVictory() {
-            gameState.active = false; isLegend = true;
-            handCursor.material.color.setHex(0xffcc00);
-            confetti({ particleCount: 200, spread: 90, origin: { y: 0.6 } });
-            document.getElementById('victory-screen').style.display = 'flex';
         }
 
         function triggerFail(reason) {
             if(godMode) return;
             gameState.active = false;
-            document.getElementById('fail-reason').innerText = reason;
-            document.getElementById('fail-screen').style.display = 'flex';
+            gameState.lives--;
+            updateLivesUI();
+
+            const skipLife = document.getElementById('skip-btn-life');
+            const skipFail = document.getElementById('skip-btn-fail');
+            const canSkip = gameState.coins >= 100;
+            skipLife.disabled = !canSkip; skipFail.disabled = !canSkip;
+
+            if (gameState.lives > 0) {
+                document.getElementById('lives-left-msg').innerText = `${gameState.lives} Lives Remaining`;
+                document.getElementById('life-lost-screen').style.display = 'flex';
+            } else {
+                document.getElementById('checkpoint-info').innerText = `World Reset: Back to Level ${gameState.checkpointLevel}`;
+                document.getElementById('fail-screen').style.display = 'flex';
+            }
         }
 
-        function restartFromStart() {
-            gameState.level = 1; gameState.score = 0;
-            document.getElementById('fail-screen').style.display = 'none';
-            setupLevel();
+        function useSkip() {
+            if(gameState.coins >= 100) {
+                gameState.coins -= 100;
+                document.getElementById('coins-display').innerText = gameState.coins;
+                gameState.level++;
+                gameState.lives = 3;
+                document.getElementById('life-lost-screen').style.display = 'none';
+                document.getElementById('fail-screen').style.display = 'none';
+                setupLevel();
+            }
         }
 
-        function nextLevel() {
-            gameState.level++;
-            setupLevel();
+        function buyCoins(amount) {
+            addCoins(amount, false);
+            closeShop();
+            confetti({ particleCount: 50, spread: 50, colors: ['#ffcc00'] });
         }
 
-        function enterGodMode() {
-            godMode = true; document.getElementById('victory-screen').style.display = 'none';
-            gameState.level = 1; setupLevel();
+        function openShop() { document.getElementById('shop-screen').style.display = 'flex'; }
+        function closeShop() { document.getElementById('shop-screen').style.display = 'none'; }
+        function retryLevel() { document.getElementById('life-lost-screen').style.display = 'none'; setupLevel(); }
+        function restartFromCheckpoint() { gameState.level = gameState.checkpointLevel; gameState.lives = 3; document.getElementById('fail-screen').style.display = 'none'; setupLevel(); }
+        function enterGodMode() { godMode = true; document.getElementById('victory-screen').style.display = 'none'; gameState.level = 1; setupLevel(); }
+        function updateLivesUI() { const hearts = document.querySelectorAll('.heart'); hearts.forEach((h, i) => h.style.opacity = i >= gameState.lives ? '0.2' : '1'); }
+
+        function createExplosion(pos, color) {
+            for(let i=0; i<15; i++) {
+                const p = new THREE.Mesh(new THREE.BoxGeometry(3,3,3), new THREE.MeshBasicMaterial({ color }));
+                p.position.copy(pos); scene.add(p);
+                const d = new THREE.Vector3((Math.random()-0.5)*150, (Math.random()-0.5)*150, (Math.random()-0.5)*150);
+                gsap.to(p.position, { x: "+="+d.x, y: "+="+d.y, z: "+="+d.z, duration: 0.5 });
+                gsap.to(p.scale, { x: 0, y: 0, z: 0, duration: 0.5, onComplete: () => scene.remove(p) });
+            }
+        }
+
+        function triggerVictory() {
+            gameState.active = false; isLegend = true;
+            handCursor.material.color.setHex(0xffcc00);
+            confetti({ particleCount: 200, spread: 90, origin: { y: 0.6 } });
+            document.getElementById('victory-screen').style.display = 'flex';
         }
 
         function animate() {
@@ -320,30 +452,32 @@
             if(gameState.active && !godMode) {
                 gameState.timeLeft -= 1/60;
                 const perc = gameState.timeLeft / 5;
-                document.getElementById('timer-bar').style.strokeDashoffset = 188 * (1 - perc);
+                document.getElementById('timer-bar').style.strokeDashoffset = 157 * (1 - perc);
                 document.getElementById('timer-text').innerText = Math.max(0, Math.ceil(gameState.timeLeft));
-                if(gameState.timeLeft <= 0) triggerFail("TIME EXPIRED!");
+                if(gameState.timeLeft <= 0) triggerFail("TIME EXPIRED");
             }
             if(handCursor) {
-                handCursor.position.lerp(handTarget, 0.25);
-                handCursor.rotation.z += 0.08;
-                if(isLegend) handCursor.scale.setScalar(1.5 + Math.sin(Date.now()*0.01)*0.2);
+                handCursor.position.lerp(handTarget, 0.2);
+                handCursor.rotation.z += 0.05;
+                neuralThreads.forEach(th => {
+                    const pos = new Float32Array([handCursor.position.x, handCursor.position.y, handCursor.position.z, th.target.position.x, th.target.position.y, th.target.position.z]);
+                    th.line.geometry.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+                    th.line.material.opacity = Math.max(0.1, 1 - (handCursor.position.distanceTo(th.target.position) / 300));
+                });
             }
             [...targets, ...obstacles].forEach(e => {
                 e.position.add(e.userData.vel);
                 if(Math.abs(e.position.x) > safeBounds.x) e.userData.vel.x *= -1;
                 if(Math.abs(e.position.y) > safeBounds.y) e.userData.vel.y *= -1;
-                e.rotation.x += 0.03; e.rotation.y += 0.03;
+                e.rotation.x += 0.02; e.rotation.y += 0.02;
             });
             renderer.render(scene, camera);
             document.getElementById('score-display').innerText = gameState.score.toString().padStart(4, '0');
         }
 
         window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            updateSafeBounds();
+            camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight); updateSafeBounds();
         });
     </script>
 </body>
