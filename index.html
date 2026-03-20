@@ -3,207 +3,344 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MindFlow Ultra | Prestige Edition</title>
+    <title>MindFlow Ultra | AI Personalized</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
-    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@200;400;700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@200;400;600;800&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Assistant', sans-serif; background-color: #0a0a0b; color: white; overflow-x: hidden; }
-        .luxury-gradient { background: linear-gradient(135deg, #c5a47e 0%, #8e7356 100%); }
-        .firework {
-            position: absolute; width: 5px; height: 5px; background: #c5a47e; border-radius: 50%;
-            animation: explode 2s ease-out infinite; opacity: 0;
-        }
-        @keyframes explode {
-            0% { transform: scale(1); opacity: 1; }
-            100% { transform: scale(20); opacity: 0; }
-        }
+        .luxury-gold { color: #c5a47e; }
+        .luxury-bg { background: linear-gradient(135deg, #c5a47e 0%, #8e7356 100%); }
+        .luxury-border { border-color: rgba(197, 164, 126, 0.3); }
+        .glass { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.05); }
         [x-cloak] { display: none !important; }
+        
+        @keyframes pulse-gold {
+            0% { box-shadow: 0 0 0 0 rgba(197, 164, 126, 0.4); }
+            70% { box-shadow: 0 0 0 15px rgba(197, 164, 126, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(197, 164, 126, 0); }
+        }
+        .animate-pulse-gold { animation: pulse-gold 2s infinite; }
     </style>
 </head>
 <body x-data="mindFlowApp()" x-init="init()">
 
-    <template x-if="!onboardingComplete">
-        <div class="min-h-screen bg-[#0a0a0b] flex items-center justify-center p-6 text-center">
-            <div class="max-w-sm">
-                <i data-lucide="shield-check" class="w-24 h-24 text-[#c5a47e] mx-auto mb-8"></i>
-                <h2 class="text-4xl font-black mb-4 italic tracking-widest text-[#c5a47e]">MINDFLOW</h2>
-                <p class="text-slate-400 mb-10 font-bold">הפלטפורמה היוקרתית של אליאב ודקל.</p>
-                <button @click="completeOnboarding()" class="w-full luxury-gradient text-black p-6 rounded-3xl font-black text-xl hover:scale-105 transition-all">
-                    צא לדרך
+    <!-- UI: Notifications -->
+    <div class="fixed top-6 left-1/2 -translate-x-1/2 z-[200] space-y-2 pointer-events-none">
+        <template x-for="note in notifications" :key="note.id">
+            <div x-transition class="glass px-6 py-3 rounded-2xl flex items-center gap-3 shadow-2xl border-l-4 border-l-[#c5a47e]">
+                <i data-lucide="sparkles" class="w-4 h-4 luxury-gold"></i>
+                <span class="text-sm font-bold" x-text="note.text"></span>
+            </div>
+        </template>
+    </div>
+
+    <!-- SCREEN 1: Onboarding Questionnaire -->
+    <template x-if="step === 'onboarding'">
+        <div class="min-h-screen flex flex-col items-center justify-center p-8 text-center max-w-lg mx-auto">
+            <div class="mb-12">
+                <i data-lucide="crown" class="w-16 h-16 luxury-gold mx-auto mb-4"></i>
+                <h1 class="text-4xl font-black italic tracking-tighter">MINDFLOW <span class="luxury-gold">ULTRA</span></h1>
+                <p class="text-slate-500 font-bold mt-2">הגדרת פרופיל אישי - Prestige Edition</p>
+            </div>
+
+            <div class="w-full space-y-8 text-right">
+                <!-- Name -->
+                <div x-show="onboardStep === 1" x-transition>
+                    <label class="block text-xl font-bold mb-4">איך קוראים לך?</label>
+                    <input x-model="tempProfile.name" type="text" placeholder="השם שלך..." class="w-full bg-white/5 p-6 rounded-3xl outline-none border luxury-border text-2xl font-bold focus:bg-white/10 transition-all">
+                </div>
+
+                <!-- Focus Area -->
+                <div x-show="onboardStep === 2" x-transition>
+                    <label class="block text-xl font-bold mb-4">מה התחום העיקרי שבו תרצה להשתפר?</label>
+                    <div class="grid grid-cols-1 gap-4">
+                        <template x-for="goal in ['עסקים ויזמות', 'לימודים והתפתחות', 'כושר ובריאות', 'שלווה ומיינדפולנס']">
+                            <button @click="tempProfile.goal = goal" :class="tempProfile.goal === goal ? 'luxury-bg text-black' : 'glass'" class="p-5 rounded-3xl text-right font-bold transition-all flex justify-between items-center">
+                                <span x-text="goal"></span>
+                                <i x-show="tempProfile.goal === goal" data-lucide="check" class="w-5 h-5"></i>
+                            </button>
+                        </template>
+                    </div>
+                </div>
+
+                <!-- Difficulty -->
+                <div x-show="onboardStep === 3" x-transition>
+                    <label class="block text-xl font-bold mb-4">באיזו רמת אינטנסיביות נתחיל?</label>
+                    <div class="grid grid-cols-1 gap-4">
+                        <template x-for="level in [{id:'light', n:'קליל (משימה ביום)'}, {id:'beast', n:'Beast Mode (אתגרים קשוחים)'}]">
+                            <button @click="tempProfile.intensity = level.id" :class="tempProfile.intensity === level.id ? 'luxury-bg text-black' : 'glass'" class="p-5 rounded-3xl text-right font-bold transition-all" x-text="level.n"></button>
+                        </template>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-12 w-full flex gap-4">
+                <button x-show="onboardStep > 1" @click="onboardStep--" class="flex-1 p-6 rounded-3xl font-bold glass">חזור</button>
+                <button @click="nextOnboardStep()" class="flex-[2] p-6 rounded-3xl font-black text-xl luxury-bg text-black shadow-xl hover:scale-105 transition-all">
+                    <span x-text="onboardStep === 3 ? 'סיום והתחלה' : 'המשך'"></span>
                 </button>
             </div>
         </div>
     </template>
 
-    <template x-if="onboardingComplete">
-        <div class="min-h-screen pb-48 relative">
-            
-            <div class="fixed inset-0 pointer-events-none z-0">
-                <div class="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-[#c5a47e]/5 blur-[120px] rounded-full"></div>
-                <div class="absolute inset-0 bg-black opacity-20"></div>
-            </div>
-
-            <div x-show="showLevelUp" x-cloak class="fixed inset-0 z-[200] flex items-center justify-center bg-black/95 backdrop-blur-2xl">
-                <div class="firework" style="top: 40%; left: 30%;"></div>
-                <div class="firework" style="top: 60%; left: 70%; animation-delay: 0.5s;"></div>
-                <div class="text-center relative z-10">
-                    <i data-lucide="trophy" class="w-48 h-48 text-[#c5a47e] mx-auto mb-10 drop-shadow-2xl"></i>
-                    <h1 class="text-6xl font-black mb-6">כל הכבוד!</h1>
-                    <p class="text-3xl font-black text-[#c5a47e] mb-12 italic">עלית לרמה <span x-text="userProfile.level"></span>!</p>
-                    <button @click="showLevelUp = false" class="luxury-gradient text-black px-12 py-5 rounded-[2.5rem] font-black text-2xl">תודה! ממשיכים</button>
-                </div>
-            </div>
-
-            <header class="px-8 py-12 flex justify-between items-center max-w-2xl mx-auto relative z-10">
-                <div class="flex items-center gap-5">
-                    <div class="relative">
-                        <div class="w-16 h-16 bg-[#1a1a1c] rounded-[1.8rem] flex items-center justify-center text-[#c5a47e] text-2xl font-black border-2 border-[#c5a47e]/30">
-                            <span x-text="userProfile.name[0]"></span>
-                        </div>
-                        <div class="absolute -bottom-1 -right-1 w-6 h-6 bg-[#c5a47e] rounded-full border-2 border-black flex items-center justify-center text-[10px] font-black text-black" x-text="userProfile.level"></div>
+    <!-- SCREEN 2: Dashboard -->
+    <template x-if="step === 'dashboard'">
+        <div class="min-h-screen pb-40">
+            <!-- Header -->
+            <header class="px-8 py-10 flex justify-between items-center max-w-2xl mx-auto relative z-10">
+                <div class="flex items-center gap-4">
+                    <div class="w-14 h-14 bg-[#1a1a1c] rounded-2xl flex items-center justify-center border luxury-border shadow-2xl">
+                        <span class="text-xl font-black luxury-gold" x-text="userProfile.name[0]"></span>
                     </div>
                     <div>
-                        <h2 class="text-2xl font-black text-white/90">היי <span x-text="userProfile.name"></span>,</h2>
-                        <div class="flex gap-3 text-[10px] font-black uppercase text-[#c5a47e] tracking-widest mt-1">
-                            <span>🔥 <span x-text="userProfile.streak"></span> DAY STREAK</span>
-                            <span>⭐ <span x-text="userProfile.xp"></span> XP</span>
+                        <h2 class="text-xl font-black">שלום, <span x-text="userProfile.name"></span></h2>
+                        <div class="flex gap-2 text-[10px] font-bold uppercase luxury-gold tracking-widest mt-1">
+                            <span>LEVEL <span x-text="userProfile.level"></span></span>
+                            <span>•</span>
+                            <span>STREAK <span x-text="userProfile.streak"></span></span>
                         </div>
                     </div>
                 </div>
+                <button @click="resetProfile()" class="p-3 glass rounded-xl text-white/20 hover:text-red-500 transition-colors">
+                    <i data-lucide="refresh-cw" class="w-5 h-5"></i>
+                </button>
             </header>
 
-            <main class="max-w-2xl mx-auto px-8 relative z-10">
+            <main class="max-w-2xl mx-auto px-6 space-y-10">
                 
-                <div x-show="activeTab === 'dashboard'" class="space-y-10">
-                    <section class="bg-[#151517] rounded-[3.5rem] p-10 relative overflow-hidden border border-white/5 shadow-2xl">
-                        <div class="relative z-10">
-                            <p class="text-[#c5a47e] font-black text-[10px] tracking-[0.2em] mb-1">PRESTIGE STATUS</p>
-                            <h3 class="text-5xl font-black mb-6"><span x-text="userProfile.xp"></span> <span class="text-lg opacity-20">/ <span x-text="userProfile.xpToNextLevel"></span></span></h3>
-                            <div class="h-2 bg-black/40 rounded-full overflow-hidden border border-white/5">
-                                <div class="h-full luxury-gradient transition-all duration-1000" :style="`width: ${(userProfile.xp / userProfile.xpToNextLevel) * 100}%`"></div>
-                            </div>
-                        </div>
-                    </section>
-
-                    <section class="space-y-6">
-                        <div class="flex justify-between items-center px-2">
-                            <h3 class="text-2xl font-black">משימות יומיות</h3>
-                            <button @click="showAddTask = true" class="luxury-gradient text-black px-6 py-3 rounded-2xl font-black text-xs uppercase">הוסף משימה +</button>
-                        </div>
-                        <div class="space-y-4">
-                            <template x-for="task in tasks" :key="task.id">
-                                <div class="bg-[#111112] p-6 rounded-[2.5rem] flex items-center border border-white/5" :class="task.done ? 'opacity-30' : ''">
-                                    <button @click="toggleTask(task.id)" class="w-12 h-12 rounded-2xl border ml-6 flex items-center justify-center transition-all" :class="task.done ? 'bg-[#c5a47e] text-black border-[#c5a47e]' : 'border-white/10 text-white/20'">
-                                        <i x-show="!task.done" data-lucide="zap" class="w-6 h-6"></i>
-                                        <i x-show="task.done" data-lucide="check" class="w-6 h-6"></i>
-                                    </button>
-                                    <div class="flex-1">
-                                        <h4 class="font-black text-lg" :class="task.done ? 'line-through' : ''" x-text="task.title"></h4>
-                                        <p class="text-[10px] text-slate-500 font-black uppercase" x-text="task.sub"></p>
-                                    </div>
-                                    <button @click="deleteTask(task.id)" class="text-red-900/40 hover:text-red-500"><i data-lucide="trash-2" class="w-5 h-5"></i></button>
-                                </div>
-                            </template>
-                        </div>
-                    </section>
-                </div>
-
-                <div x-show="activeTab === 'focus'" class="flex flex-col items-center py-12">
-                    <div class="relative w-64 h-64 flex items-center justify-center mb-16">
-                        <svg class="absolute inset-0 w-full h-full -rotate-90">
-                            <circle cx="128" cy="128" r="120" fill="transparent" stroke="#151517" stroke-width="8" />
-                            <circle cx="128" cy="128" r="120" fill="transparent" stroke="#c5a47e" stroke-width="8" stroke-dasharray="754" :stroke-dashoffset="754 - (754 * (timeLeft / 1500))" stroke-linecap="round" />
-                        </svg>
-                        <div class="text-center">
-                            <span class="text-6xl font-black tabular-nums text-white" x-text="formatTime(timeLeft)"></span>
-                        </div>
+                <!-- AI Generator Block -->
+                <section class="relative overflow-hidden p-8 rounded-[2.5rem] glass border luxury-border">
+                    <div class="absolute top-0 right-0 p-4 opacity-10">
+                        <i data-lucide="brain" class="w-20 h-20 luxury-gold"></i>
                     </div>
-                    <div class="flex gap-8">
-                        <button @click="toggleTimer()" class="w-20 h-20 luxury-gradient text-black rounded-[2rem] flex items-center justify-center shadow-xl">
-                            <i x-show="!timerRunning" data-lucide="play" class="w-8 h-8 fill-current"></i>
-                            <i x-show="timerRunning" data-lucide="pause" class="w-8 h-8"></i>
+                    <div class="relative z-10">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="luxury-bg text-black text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-tighter">AI AGENT</span>
+                            <h3 class="text-xl font-black">מחולל אתגרים אישי</h3>
+                        </div>
+                        <p class="text-slate-400 text-sm mb-6">מבוסס על היעדים שלך ב<span x-text="userProfile.goal"></span></p>
+                        
+                        <button @click="generateAiTasks()" :disabled="loadingAi" class="w-full py-4 luxury-bg text-black rounded-2xl font-black text-lg flex items-center justify-center gap-3 transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-50">
+                            <i x-show="!loadingAi" data-lucide="sparkles" class="w-5 h-5"></i>
+                            <i x-show="loadingAi" data-lucide="loader-2" class="w-5 h-5 animate-spin"></i>
+                            <span x-text="loadingAi ? 'מעבד נתונים...' : 'צור לי אתגרים חדשים'"></span>
                         </button>
                     </div>
-                </div>
+                </section>
 
+                <!-- Tasks List -->
+                <section class="space-y-6">
+                    <div class="flex justify-between items-center px-2">
+                        <h3 class="text-2xl font-black tracking-tight">המסלול שלך להיום</h3>
+                        <span class="text-xs font-bold text-slate-500" x-text="tasks.length + ' משימות'"></span>
+                    </div>
+
+                    <div class="space-y-4">
+                        <template x-for="task in tasks" :key="task.id">
+                            <div class="glass p-6 rounded-[2rem] flex items-center group transition-all" :class="task.done ? 'opacity-20 scale-95' : 'hover:border-[#c5a47e]/50'">
+                                <button @click="completeTask(task)" :disabled="task.done" class="w-12 h-12 rounded-2xl border luxury-border ml-5 flex items-center justify-center transition-all" :class="task.done ? 'luxury-bg text-black' : 'text-white/20 group-hover:text-[#c5a47e]'">
+                                    <i x-show="!task.done" data-lucide="zap" class="w-6 h-6"></i>
+                                    <i x-show="task.done" data-lucide="check" class="w-6 h-6"></i>
+                                </button>
+                                <div class="flex-1">
+                                    <div class="flex items-center gap-2">
+                                        <h4 class="font-bold text-lg" x-text="task.title"></h4>
+                                        <span class="text-[10px] font-black luxury-gold" x-text="'+' + task.xp + ' XP'"></span>
+                                    </div>
+                                    <p class="text-xs text-slate-500 font-medium" x-text="task.sub"></p>
+                                </div>
+                                <button @click="deleteTask(task.id)" class="opacity-0 group-hover:opacity-100 p-2 text-white/10 hover:text-red-500 transition-all">
+                                    <i data-lucide="x" class="w-4 h-4"></i>
+                                </button>
+                            </div>
+                        </template>
+
+                        <template x-if="tasks.length === 0">
+                            <div class="text-center py-12 border-2 border-dashed border-white/5 rounded-[2rem]">
+                                <i data-lucide="clipboard-list" class="w-12 h-12 text-white/5 mx-auto mb-4"></i>
+                                <p class="text-slate-500 font-bold">אין משימות כרגע. תן ל-AI לייצר לך משהו קשוח!</p>
+                            </div>
+                        </template>
+                    </div>
+                </section>
+
+                <!-- XP Progress -->
+                <section class="bg-[#151517] p-8 rounded-[2.5rem] border luxury-border">
+                    <div class="flex justify-between items-end mb-4">
+                        <div>
+                            <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Progress</p>
+                            <h4 class="text-2xl font-black tracking-tighter"><span x-text="userProfile.xp"></span> / <span x-text="userProfile.xpToNextLevel"></span> XP</h4>
+                        </div>
+                        <i data-lucide="trending-up" class="luxury-gold"></i>
+                    </div>
+                    <div class="h-2 bg-black rounded-full overflow-hidden">
+                        <div class="h-full luxury-bg transition-all duration-700" :style="`width: ${(userProfile.xp/userProfile.xpToNextLevel)*100}%`"></div>
+                    </div>
+                </section>
             </main>
 
-            <nav class="fixed bottom-8 left-0 right-0 z-30">
-                <div class="max-w-xs mx-auto bg-black/80 backdrop-blur-xl border border-white/5 rounded-[3rem] px-8 py-6 flex justify-around items-center">
-                    <button @click="activeTab = 'dashboard'" :class="activeTab === 'dashboard' ? 'text-[#c5a47e]' : 'text-white/20'"><i data-lucide="layout"></i></button>
-                    <button @click="activeTab = 'focus'" :class="activeTab === 'focus' ? 'text-[#c5a47e]' : 'text-white/20'"><i data-lucide="zap"></i></button>
-                    <button @click="activeTab = 'awards'" :class="activeTab === 'awards' ? 'text-[#c5a47e]' : 'text-white/20'"><i data-lucide="trophy"></i></button>
+            <!-- Nav -->
+            <nav class="fixed bottom-10 left-0 right-0 z-50">
+                <div class="max-w-xs mx-auto glass p-6 rounded-[3rem] flex justify-around items-center shadow-2xl">
+                    <button @click="activeTab = 'home'" :class="activeTab === 'home' ? 'luxury-gold scale-125' : 'text-white/20'"><i data-lucide="layout-grid"></i></button>
+                    <button @click="activeTab = 'timer'" :class="activeTab === 'timer' ? 'luxury-gold scale-125' : 'text-white/20'"><i data-lucide="timer"></i></button>
+                    <button @click="activeTab = 'awards'" :class="activeTab === 'awards' ? 'text-white/20'"><i data-lucide="award"></i></button>
                 </div>
             </nav>
-
-            <div x-show="showAddTask" x-cloak class="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-6">
-                <div class="bg-[#111112] border border-[#c5a47e]/20 rounded-[3rem] p-10 w-full max-w-sm">
-                    <h3 class="text-2xl font-black mb-8 text-center">משימה חדשה</h3>
-                    <input x-model="newTaskTitle" placeholder="מה היעד?" class="w-full bg-white/5 p-5 rounded-2xl mb-4 outline-none border border-white/5 focus:border-[#c5a47e]/40">
-                    <input x-model="newTaskSub" placeholder="תיאור קצר..." class="w-full bg-white/5 p-5 rounded-2xl mb-8 outline-none border border-white/5">
-                    <button @click="addTask()" class="w-full luxury-gradient text-black p-5 rounded-2xl font-black text-lg">שמור במערכת</button>
-                    <button @click="showAddTask = false" class="w-full text-slate-500 mt-4 font-bold">ביטול</button>
-                </div>
-            </div>
-
         </div>
     </template>
+
+    <!-- Level Up Modal -->
+    <div x-show="showLevelModal" x-cloak class="fixed inset-0 z-[300] bg-black/95 backdrop-blur-2xl flex items-center justify-center p-8 text-center" x-transition>
+        <div>
+            <div class="relative inline-block mb-10">
+                <i data-lucide="trophy" class="w-40 h-40 luxury-gold animate-bounce drop-shadow-[0_0_50px_rgba(197,164,126,0.5)]"></i>
+            </div>
+            <h2 class="text-6xl font-black mb-4">עלית רמה!</h2>
+            <p class="text-2xl font-bold luxury-gold mb-12">הגעת לרמה <span x-text="userProfile.level"></span></p>
+            <button @click="showLevelModal = false" class="luxury-bg text-black px-12 py-5 rounded-[2rem] font-black text-xl shadow-2xl transition-all hover:scale-110">המשך בכיבוש</button>
+        </div>
+    </div>
 
     <script>
         function mindFlowApp() {
             return {
-                onboardingComplete: localStorage.getItem('mf_onboard') === 'true',
-                activeTab: 'dashboard',
-                showAddTask: false,
-                showLevelUp: false,
-                userProfile: JSON.parse(localStorage.getItem('mf_profile')) || {
-                    name: 'דקל', level: 1, xp: 0, xpToNextLevel: 100, streak: 1
+                apiKey: "", // הקישור מתבצע אוטומטית בסביבה
+                step: 'onboarding',
+                onboardStep: 1,
+                activeTab: 'home',
+                loadingAi: false,
+                showLevelModal: false,
+                notifications: [],
+                
+                userProfile: {
+                    name: '',
+                    goal: '',
+                    intensity: 'light',
+                    level: 1,
+                    xp: 0,
+                    xpToNextLevel: 100,
+                    streak: 1
                 },
-                tasks: JSON.parse(localStorage.getItem('mf_tasks')) || [
-                    { id: 1, title: 'קריאת בוקר מונחית', sub: '15 דקות', done: false, xp: 20 },
-                    { id: 2, title: 'סשן Deep Work', sub: 'פרויקט SkorChat', done: false, xp: 50 }
-                ],
-                timeLeft: 1500,
-                timerRunning: false,
-                timerInterval: null,
-                newTaskTitle: '',
-                newTaskSub: '',
+
+                tempProfile: {
+                    name: '',
+                    goal: '',
+                    intensity: 'light'
+                },
+
+                tasks: [],
 
                 init() {
-                    lucide.createIcons();
-                },
-
-                completeOnboarding() {
-                    this.onboardingComplete = true;
-                    localStorage.setItem('mf_onboard', 'true');
-                    setTimeout(() => lucide.createIcons(), 100);
-                },
-
-                addTask() {
-                    if (!this.newTaskTitle) return;
-                    this.tasks.push({
-                        id: Date.now(),
-                        title: this.newTaskTitle,
-                        sub: this.newTaskSub || 'משימה אישית',
-                        done: false,
-                        xp: 25
-                    });
-                    this.save();
-                    this.newTaskTitle = '';
-                    this.newTaskSub = '';
-                    this.showAddTask = false;
-                    setTimeout(() => lucide.createIcons(), 50);
-                },
-
-                toggleTask(id) {
-                    const task = this.tasks.find(t => t.id === id);
-                    if (task && !task.done) {
-                        task.done = true;
-                        this.addXp(task.xp);
-                        this.save();
+                    const saved = localStorage.getItem('mf_ultra_user');
+                    if (saved) {
+                        this.userProfile = JSON.parse(saved);
+                        this.step = 'dashboard';
                     }
+                    this.tasks = JSON.parse(localStorage.getItem('mf_ultra_tasks')) || [];
+                    
+                    this.$nextTick(() => lucide.createIcons());
+                    
+                    // Cleanup old notifications
+                    setInterval(() => {
+                        if (this.notifications.length > 0) this.notifications.shift();
+                    }, 4000);
+                },
+
+                nextOnboardStep() {
+                    if (this.onboardStep === 1 && !this.tempProfile.name) return;
+                    if (this.onboardStep === 2 && !this.tempProfile.goal) return;
+                    
+                    if (this.onboardStep < 3) {
+                        this.onboardStep++;
+                    } else {
+                        this.userProfile = { ...this.userProfile, ...this.tempProfile };
+                        this.save();
+                        this.step = 'dashboard';
+                        this.notify("ברוך הבא ל-MindFlow Ultra ✨");
+                        this.$nextTick(() => lucide.createIcons());
+                    }
+                },
+
+                notify(text) {
+                    const id = Date.now();
+                    this.notifications.push({ id, text });
+                },
+
+                async generateAiTasks() {
+                    this.loadingAi = true;
+                    
+                    const systemPrompt = `You are MindFlow AI Agent. Generate 3 personalized tasks for a user named ${this.userProfile.name}. 
+                    Focus Area: ${this.userProfile.goal}. 
+                    Intensity: ${this.userProfile.intensity}.
+                    Language: Hebrew.
+                    Response format: JSON only. 
+                    Structure: { "tasks": [{ "title": "string", "sub": "string", "xp": number }] }`;
+
+                    const userQuery = `Create 3 challenging tasks for today based on my profile.`;
+
+                    try {
+                        const response = await this.callGemini(userQuery, systemPrompt);
+                        const data = JSON.parse(response);
+                        
+                        if (data.tasks) {
+                            const newTasks = data.tasks.map(t => ({ ...t, id: Math.random(), done: false }));
+                            this.tasks = [...newTasks, ...this.tasks];
+                            this.save();
+                            this.notify("ה-AI יצר עבורך משימות חדשות!");
+                            this.$nextTick(() => lucide.createIcons());
+                        }
+                    } catch (e) {
+                        console.error(e);
+                        this.notify("שגיאה בחיבור ל-AI. נסה שוב.");
+                    } finally {
+                        this.loadingAi = false;
+                    }
+                },
+
+                async callGemini(userQuery, systemPrompt, retries = 5) {
+                    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${this.apiKey}`;
+                    const payload = {
+                        contents: [{ parts: [{ text: userQuery }] }],
+                        systemInstruction: { parts: [{ text: systemPrompt }] },
+                        generationConfig: { responseMimeType: "application/json" }
+                    };
+
+                    for (let i = 0; i < retries; i++) {
+                        try {
+                            const res = await fetch(url, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify(payload)
+                            });
+                            const result = await res.json();
+                            return result.candidates[0].content.parts[0].text;
+                        } catch (e) {
+                            if (i === retries - 1) throw e;
+                            await new Promise(r => setTimeout(r, Math.pow(2, i) * 1000));
+                        }
+                    }
+                },
+
+                completeTask(task) {
+                    task.done = true;
+                    this.userProfile.xp += task.xp;
+                    this.notify(`+${task.xp} XP הופקדו בחשבון!`);
+                    
+                    if (this.userProfile.xp >= this.userProfile.xpToNextLevel) {
+                        this.levelUp();
+                    }
+                    this.save();
+                },
+
+                levelUp() {
+                    this.userProfile.level++;
+                    this.userProfile.xp -= this.userProfile.xpToNextLevel;
+                    this.userProfile.xpToNextLevel = Math.floor(this.userProfile.xpToNextLevel * 1.4);
+                    this.showLevelModal = true;
+                    this.$nextTick(() => lucide.createIcons());
                 },
 
                 deleteTask(id) {
@@ -211,47 +348,20 @@
                     this.save();
                 },
 
-                addXp(amount) {
-                    this.userProfile.xp += amount;
-                    if (this.userProfile.xp >= this.userProfile.xpToNextLevel) {
-                        this.userProfile.level++;
-                        this.userProfile.xp -= this.userProfile.xpToNextLevel;
-                        this.userProfile.xpToNextLevel = Math.floor(this.userProfile.xpToNextLevel * 1.3);
-                        this.showLevelUp = true;
+                resetProfile() {
+                    if (confirm("האם לאפס את כל ההתקדמות שלך?")) {
+                        localStorage.clear();
+                        window.location.reload();
                     }
-                    this.save();
-                },
-
-                toggleTimer() {
-                    if (this.timerRunning) {
-                        clearInterval(this.timerInterval);
-                    } else {
-                        this.timerInterval = setInterval(() => {
-                            if (this.timeLeft > 0) {
-                                this.timeLeft--;
-                            } else {
-                                this.toggleTimer();
-                                this.addXp(100);
-                                alert("סשן הושלם! +100 XP");
-                                this.timeLeft = 1500;
-                            }
-                        }, 1000);
-                    }
-                    this.timerRunning = !this.timerRunning;
-                },
-
-                formatTime(seconds) {
-                    const m = Math.floor(seconds / 60);
-                    const s = seconds % 60;
-                    return `${m}:${s.toString().padStart(2, '0')}`;
                 },
 
                 save() {
-                    localStorage.setItem('mf_profile', JSON.stringify(this.userProfile));
-                    localStorage.setItem('mf_tasks', JSON.stringify(this.tasks));
+                    localStorage.setItem('mf_ultra_user', JSON.stringify(this.userProfile));
+                    localStorage.setItem('mf_ultra_tasks', JSON.stringify(this.tasks));
                 }
             }
         }
     </script>
 </body>
 </html>
+
