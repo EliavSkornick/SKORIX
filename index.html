@@ -1,485 +1,482 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Skor-Heroes | Eliav Skornick Economy Edition</title>
-    
-    <!-- Dependencies -->
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+import React, { useState, useEffect, useRef } from 'react';
+import { 
+  BookOpen, Clock, Trophy, User, ChevronRight, CheckCircle2, 
+  ArrowRight, TrendingUp, Zap, BookMarked, Play, Pause, 
+  RotateCcw, MessageSquare, BarChart3, Search, Plus, 
+  Settings, Flame, Star, Moon, Sun, Layout, Target, 
+  Brain, Coffee, Battery, Sparkles, Send, X, Bell, Loader2,
+  Trash2, Award, PlusCircle, RefreshCw, ShieldCheck, Crown,
+  Lightbulb, Ghost, Heart, Wand2, Dna
+} from 'lucide-react';
 
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Luckiest+Guy&family=Rubik:wght@400;900&display=swap');
+/**
+ * MindFlow Ultra
+ * © 2024-2025 Eliav Skornick & Dekel. All Rights Reserved.
+ * AI Task Generator & Luxury Edition
+ */
 
-        :root {
-            --primary: #00f2ff;
-            --secondary: #ff007a;
-            --gold: #ffcc00;
-            --bg: #010105;
-            --danger: #ff0000;
-            --success: #00ff88;
-        }
+const App = () => {
+  // --- Core State ---
+  const [onboardingComplete, setOnboardingComplete] = useState(() => {
+    return localStorage.getItem('mindflow_onboarding') === 'true';
+  });
+  const [activeTab, setActiveTab] = useState('dashboard');
+  const [showAddTask, setShowAddTask] = useState(false);
+  const [showLevelUp, setShowLevelUp] = useState(false);
+  const [notification, setNotification] = useState(null);
+  const [isDarkMode, setIsDarkMode] = useState(true);
+  const [isGeneratingAi, setIsGeneratingAi] = useState(false);
 
-        body, html {
-            margin: 0; padding: 0; width: 100%; height: 100%;
-            background-color: var(--bg); color: white;
-            font-family: 'Rubik', sans-serif; overflow: hidden;
-            user-select: none; touch-action: none;
-        }
+  // --- New Task Form State ---
+  const [newTaskTitle, setNewTaskTitle] = useState('');
+  const [newTaskSub, setNewTaskSub] = useState('');
 
-        #webcam-view {
-            position: fixed; inset: 0; width: 100vw; height: 100vh;
-            z-index: 0; transform: scaleX(-1); opacity: 0.04;
-            pointer-events: none; filter: brightness(0.5) contrast(1.2);
-        }
-        video { width: 100%; height: 100%; object-fit: cover; }
+  // --- User Profile ---
+  const [userProfile, setUserProfile] = useState(() => {
+    const saved = localStorage.getItem('mindflow_profile');
+    return saved ? JSON.parse(saved) : {
+      name: 'דקל',
+      level: 1,
+      xp: 0,
+      xpToNextLevel: 100,
+      streak: 1,
+      totalFocusMinutes: 0,
+      unlockedBadges: []
+    };
+  });
 
-        #canvas-container { position: absolute; inset: 0; z-index: 2; background: transparent; }
+  // --- Data State ---
+  const [tasks, setTasks] = useState(() => {
+    const saved = localStorage.getItem('mindflow_tasks');
+    const defaultTasks = [
+      { id: 1, title: "קריאת בוקר מונחית", sub: "15 דקות ללא הסחות", done: false, xp: 20 },
+      { id: 2, title: "סשן Deep Work", sub: "התקדמות בפרויקט הראשי", done: false, xp: 50 }
+    ];
+    return saved ? JSON.parse(saved) : defaultTasks;
+  });
 
-        .game-ui {
-            position: absolute; inset: 0; z-index: 10;
-            pointer-events: none; padding: env(safe-area-inset-top, 20px) 20px 20px 20px;
-            display: flex; flex-direction: column;
-        }
+  // --- AI Suggested Tasks State ---
+  const [aiSuggestions, setAiSuggestions] = useState([
+    { id: 'ai-1', title: "אתגר 20 דקות ללא טלפון", sub: "קטגוריה: משמעת עצמית", xp: 40, type: 'challenge' },
+    { id: 'ai-2', title: "תכנון לו\"ז למחר בערב", sub: "קטגוריה: ארגון", xp: 25, type: 'task' }
+  ]);
 
-        .top-row { display: flex; justify-content: space-between; align-items: flex-start; width: 100%; }
-        
-        .stats-group { display: flex; flex-direction: column; gap: 8px; }
+  // --- Persistence ---
+  useEffect(() => {
+    localStorage.setItem('mindflow_tasks', JSON.stringify(tasks));
+  }, [tasks]);
 
-        .score-box {
-            background: rgba(0,0,0,0.9); border: 2px solid var(--primary);
-            padding: 5px 15px; border-radius: 50px;
-            font-family: 'Luckiest Guy', cursive; font-size: 1.3rem;
-            box-shadow: 0 0 10px var(--primary);
-        }
+  useEffect(() => {
+    localStorage.setItem('mindflow_profile', JSON.stringify(userProfile));
+  }, [userProfile]);
 
-        /* Coins HUD */
-        .coins-box {
-            background: rgba(0,0,0,0.9); border: 2px solid var(--gold);
-            padding: 5px 15px; border-radius: 50px;
-            font-family: 'Luckiest Guy', cursive; font-size: 1.3rem;
-            display: flex; align-items: center; gap: 8px;
-            box-shadow: 0 0 10px var(--gold);
-            pointer-events: auto; cursor: pointer;
-        }
-        .coin-icon { color: var(--gold); font-size: 1.5rem; }
+  // --- Daily Quotes ---
+  const quotes = [
+    "הדרך הטובה ביותר לחזות את העתיד היא ליצור אותו.",
+    "אל תספור את הימים, גרום לימים להיספר.",
+    "פוקוס הוא הסופר-כוח החדש.",
+    "מי שמעז - מנצח."
+  ];
+  const [quote] = useState(quotes[Math.floor(Math.random() * quotes.length)]);
 
-        .lives-container { display: flex; gap: 5px; font-size: 1.2rem; }
-        .heart { color: var(--secondary); text-shadow: 0 0 8px var(--secondary); }
-        .heart.lost { opacity: 0.2; }
+  const notify = (msg) => {
+    setNotification(msg);
+    setTimeout(() => setNotification(null), 4000);
+  };
 
-        .timer-container {
-            position: relative; width: 55px; height: 55px;
-            display: flex; align-items: center; justify-content: center;
-        }
-        .timer-svg { transform: rotate(-90deg); width: 55px; height: 55px; }
-        .timer-bar { 
-            fill: none; stroke: var(--secondary); stroke-width: 6; 
-            stroke-dasharray: 157; stroke-dashoffset: 0;
-            transition: stroke-dashoffset 0.1s linear;
-        }
-        #timer-text { position: absolute; font-family: 'Luckiest Guy'; font-size: 1.1rem; }
+  const addXp = (amount) => {
+    setUserProfile(prev => {
+      let newXp = prev.xp + amount;
+      let newLevel = prev.level;
+      let newTarget = prev.xpToNextLevel;
+      
+      if (newXp >= prev.xpToNextLevel) {
+        newLevel += 1;
+        newXp = newXp - prev.xpToNextLevel;
+        newTarget = Math.floor(prev.xpToNextLevel * 1.3);
+        setTimeout(() => setShowLevelUp(true), 500);
+      }
+      
+      return { ...prev, xp: newXp, level: newLevel, xpToNextLevel: newTarget };
+    });
+  };
 
-        .mission-header { width: 100%; text-align: center; margin-top: 5px; }
-        #level-tag { font-family: 'Luckiest Guy'; color: var(--gold); font-size: 1.4rem; }
+  const toggleTask = (id) => {
+    setTasks(prev => prev.map(task => {
+      if (task.id === id && !task.done) {
+        addXp(task.xp);
+        return { ...task, done: true };
+      }
+      return task;
+    }));
+  };
 
-        /* Overlays */
-        .overlay-screen {
-            position: fixed; inset: 0; background: rgba(0, 0, 0, 0.98);
-            z-index: 1000; display: flex; flex-direction: column;
-            align-items: center; justify-content: center; text-align: center; padding: 25px;
-        }
-        .game-title { font-family: 'Luckiest Guy'; font-size: 3.5rem; color: var(--primary); margin: 0; }
-        
-        .play-btn {
-            background: var(--gold); color: #000; border: none;
-            padding: 12px 35px; font-size: 1.6rem; font-family: 'Luckiest Guy';
-            border-radius: 15px; cursor: pointer; margin-top: 20px;
-            box-shadow: 0 6px 0 #b38f00; pointer-events: auto;
-        }
-        .skip-btn {
-            background: var(--success); color: #000; border: none;
-            padding: 12px 35px; font-size: 1.4rem; font-family: 'Luckiest Guy';
-            border-radius: 15px; cursor: pointer; margin-top: 10px;
-            box-shadow: 0 6px 0 #009955; pointer-events: auto;
-            display: flex; align-items: center; gap: 10px;
-        }
-        .skip-btn:disabled { background: #555; box-shadow: 0 6px 0 #333; opacity: 0.6; cursor: not-allowed; }
+  const deleteTask = (id) => {
+    setTasks(prev => prev.filter(task => task.id !== id));
+    notify("משימה נמחקה");
+  };
 
-        /* Shop Modal */
-        #shop-screen { display: none; }
-        .shop-container {
-            background: #111; border: 3px solid var(--gold); padding: 30px;
-            border-radius: 25px; width: 85%; max-width: 400px;
-        }
-        .shop-item {
-            background: rgba(255,255,255,0.05); margin: 10px 0; padding: 15px;
-            border-radius: 15px; display: flex; justify-content: space-between; align-items: center;
-            border: 1px solid rgba(255,204,0,0.2);
-        }
+  const handleCreateTask = () => {
+    if (!newTaskTitle.trim()) return;
+    const newTask = {
+      id: Date.now(),
+      title: newTaskTitle,
+      sub: newTaskSub || "משימה אישית",
+      done: false,
+      xp: 25
+    };
+    setTasks(prev => [...prev, newTask]);
+    setNewTaskTitle('');
+    setNewTaskSub('');
+    setShowAddTask(false);
+    notify("משימה נוספה בהצלחה! 🚀");
+  };
 
-        .floating-coin {
-            position: fixed; pointer-events: none; z-index: 100;
-            color: var(--gold); font-family: 'Luckiest Guy'; font-size: 1.5rem;
-        }
-    </style>
-</head>
-<body>
+  const acceptAiSuggestion = (suggestion) => {
+    const newTask = {
+      ...suggestion,
+      id: Date.now(),
+      done: false
+    };
+    setTasks(prev => [...prev, newTask]);
+    setAiSuggestions(prev => prev.filter(s => s.id !== suggestion.id));
+    notify("אתגר AI התקבל! בהצלחה ✨");
+  };
 
-    <!-- מסך פתיחה -->
-    <div id="boot-screen" class="overlay-screen">
-        <h1 class="game-title">SKOR-HEROES</h1>
-        <p style="font-weight: 900; color: var(--gold); font-size: 1.2rem; letter-spacing: 2px;">BY ELIAV SKORNICK</p>
-        <div style="margin-top: 20px; font-size: 0.9rem; opacity: 0.8;">
-            3 LIVES • CHECKPOINTS EVERY 10 LEVELS<br>
-            EARN 100 COINS EVERY WORLD TO SKIP!
+  const generateNewAiSuggestions = () => {
+    setIsGeneratingAi(true);
+    setTimeout(() => {
+      const pool = [
+        { id: `ai-${Date.now()}-1`, title: "מדיטציית פוקוס קצרה", sub: "קטגוריה: מיינדפולנס", xp: 30, type: 'challenge' },
+        { id: `ai-${Date.now()}-2`, title: "קריאת 5 עמודים בספר", sub: "קטגוריה: למידה", xp: 20, type: 'task' },
+        { id: `ai-${Date.now()}-3`, title: "סידור שולחן העבודה", sub: "קטגוריה: סביבה", xp: 15, type: 'task' },
+        { id: `ai-${Date.now()}-4`, title: "אתגר 'ללא סוכר' עד הערב", sub: "קטגוריה: בריאות", xp: 50, type: 'challenge' }
+      ];
+      // Randomly pick 2
+      const shuffled = pool.sort(() => 0.5 - Math.random());
+      setAiSuggestions(shuffled.slice(0, 2));
+      setIsGeneratingAi(false);
+      notify("ה-AI יצר עבורך אתגרים חדשים!");
+    }, 1500);
+  };
+
+  // --- Timer State ---
+  const [isTimerRunning, setIsTimerRunning] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(1500); 
+  const totalTimerDuration = 1500;
+
+  useEffect(() => {
+    let interval;
+    if (isTimerRunning && timeLeft > 0) {
+      interval = setInterval(() => setTimeLeft(prev => prev - 1), 1000);
+    } else if (timeLeft === 0 && isTimerRunning) {
+      setIsTimerRunning(false);
+      addXp(100);
+      setUserProfile(prev => ({...prev, totalFocusMinutes: prev.totalFocusMinutes + 25}));
+      notify("סשן הושלם! +100 XP 🏆");
+    }
+    return () => clearInterval(interval);
+  }, [isTimerRunning, timeLeft]);
+
+  if (!onboardingComplete) {
+      return (
+        <div className="min-h-screen bg-[#0a0a0b] flex items-center justify-center p-6 text-right text-white" dir="rtl">
+            <div className="text-center max-w-sm">
+                <ShieldCheck className="w-24 h-24 text-[#c5a47e] mx-auto mb-8" />
+                <h2 className="text-4xl font-black mb-4 italic tracking-widest text-[#c5a47e]">MINDFLOW</h2>
+                <p className="text-slate-400 mb-10 font-bold">הפלטפורמה היוקרתית של אליאב ודקל.</p>
+                <button 
+                  onClick={() => {
+                    localStorage.setItem('mindflow_onboarding', 'true');
+                    setOnboardingComplete(true);
+                  }} 
+                  className="w-full bg-[#c5a47e] text-black p-6 rounded-3xl font-black text-xl hover:bg-[#b3936d] transition-colors"
+                >
+                    צא לדרך
+                </button>
+            </div>
         </div>
-        <button class="play-btn" onclick="startGame()">START MISSION</button>
-    </div>
+      );
+  }
 
-    <!-- חנות מטבעות -->
-    <div id="shop-screen" class="overlay-screen">
-        <div class="shop-container">
-            <h2 style="color: var(--gold); font-family: 'Luckiest Guy'; font-size: 2.5rem; margin-top: 0;">COIN SHOP</h2>
-            <div class="shop-item">
-                <span>100 COINS</span>
-                <button class="play-btn" style="margin:0; padding: 5px 15px; font-size: 1rem;" onclick="buyCoins(100)">$1.99</button>
-            </div>
-            <div class="shop-item">
-                <span>500 COINS</span>
-                <button class="play-btn" style="margin:0; padding: 5px 15px; font-size: 1rem;" onclick="buyCoins(500)">$4.99</button>
-            </div>
-            <div class="shop-item" style="border: 2px solid var(--primary);">
-                <span style="color: var(--primary)">LEGEND PACK (1500)</span>
-                <button class="play-btn" style="margin:0; padding: 5px 15px; font-size: 1rem; background: var(--primary)" onclick="buyCoins(1500)">$9.99</button>
-            </div>
-            <button class="play-btn" style="background: #333; box-shadow: none; width: 100%;" onclick="closeShop()">CLOSE</button>
+  return (
+    <div className={`min-h-screen font-sans pb-48 text-right transition-colors duration-700 bg-[#0a0a0b] text-white overflow-x-hidden`} dir="rtl">
+      
+      {/* Luxury Background Effects */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
+          <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-[#c5a47e]/5 blur-[120px] rounded-full"></div>
+          <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-indigo-900/10 blur-[150px] rounded-full"></div>
+          <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/dark-matter.png')] opacity-20"></div>
+      </div>
+
+      <style>{`
+        @keyframes firework {
+          0% { transform: translate(-50%, 60vh); width: 0.5vmin; opacity: 1; }
+          50% { width: 0.5vmin; opacity: 1; }
+          100% { transform: translate(-50%, -50%); width: 45vmin; opacity: 0; }
+        }
+        .firework, .firework::before, .firework::after {
+          content: ""; position: absolute; top: 50%; left: 50%;
+          aspect-ratio: 1; background: radial-gradient(circle, #c5a47e 0.2vmin, #0000 0) 50% 00%, radial-gradient(circle, #c5a47e 0.3vmin, #0000 0) 00% 50%, radial-gradient(circle, #c5a47e 0.5vmin, #0000 0) 50% 99%, radial-gradient(circle, #c5a47e 0.2vmin, #0000 0) 99% 50%, radial-gradient(circle, #c5a47e 0.3vmin, #0000 0) 80% 90%, radial-gradient(circle, #c5a47e 0.5vmin, #0000 0) 95% 90%, radial-gradient(circle, #c5a47e 0.5vmin, #0000 0) 10% 60%, radial-gradient(circle, #c5a47e 0.2vmin, #0000 0) 31% 80%, radial-gradient(circle, #c5a47e 0.3vmin, #0000 0) 80% 10%, radial-gradient(circle, #c5a47e 0.2vmin, #0000 0) 90% 23%, radial-gradient(circle, #c5a47e 0.3vmin, #0000 0) 45% 20%, radial-gradient(circle, #c5a47e 0.5vmin, #0000 0) 13% 24%;
+          background-size: 0.5vmin 0.5vmin; background-repeat: no-repeat;
+          animation: firework 2s infinite;
+        }
+        .firework::before { transform: translate(-50%, -50%) rotate(25deg) !important; }
+        .firework::after { transform: translate(-50%, -50%) rotate(-37deg) !important; }
+      `}</style>
+
+      {/* --- Notification --- */}
+      {notification && (
+        <div className="fixed top-8 left-1/2 -translate-x-1/2 z-[100] bg-black/80 backdrop-blur-md text-[#c5a47e] px-8 py-4 rounded-3xl shadow-2xl flex items-center gap-3 animate-in slide-in-from-top-10 font-bold border border-[#c5a47e]/20">
+          <Crown className="w-5 h-5 text-[#c5a47e]" /> {notification}
         </div>
-    </div>
+      )}
 
-    <!-- מסך איבוד חיים -->
-    <div id="life-lost-screen" class="overlay-screen" style="display: none;">
-        <h1 class="game-title" style="color: var(--secondary);">LIFE LOST</h1>
-        <p id="lives-left-msg" style="margin-top: 10px;">2 Lives Remaining</p>
-        
-        <button class="play-btn" onclick="retryLevel()">TRY AGAIN</button>
-        
-        <div style="margin: 15px 0; opacity: 0.5;">— OR —</div>
-        
-        <button id="skip-btn-life" class="skip-btn" onclick="useSkip()">
-            SKIP LEVEL <span style="background: rgba(0,0,0,0.2); padding: 2px 8px; border-radius: 10px;">🪙 100</span>
+      {/* --- LEVEL UP CELEBRATION --- */}
+      {showLevelUp && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/95 backdrop-blur-2xl overflow-hidden animate-in fade-in duration-500">
+          <div className="firework" style={{ left: '30%', top: '40%' }}></div>
+          <div className="firework" style={{ left: '70%', top: '30%', animationDelay: '-0.5s' }}></div>
+          <div className="firework" style={{ left: '50%', top: '60%', animationDelay: '-1.2s' }}></div>
+          
+          <div className="relative z-10 text-center animate-in zoom-in duration-700">
+            <div className="relative inline-block mb-10">
+               <Trophy className="w-48 h-48 text-[#c5a47e] drop-shadow-[0_0_50px_rgba(197,164,126,0.6)] animate-bounce" />
+               <Sparkles className="absolute -top-4 -right-4 w-12 h-12 text-white animate-pulse" />
+            </div>
+            <h1 className="text-6xl font-black text-white mb-6 tracking-tighter">כל הכבוד!</h1>
+            <p className="text-3xl font-black text-[#c5a47e] mb-4 tracking-tight italic">עלית רמה! תמשיך ככה</p>
+            <div className="inline-block bg-[#c5a47e]/10 px-6 py-2 rounded-full border border-[#c5a47e]/20 mb-12">
+               <span className="text-white font-black text-xl">רמה {userProfile.level} הושגה</span>
+            </div>
+            <br />
+            <button 
+              onClick={() => setShowLevelUp(false)}
+              className="bg-[#c5a47e] text-black px-12 py-5 rounded-[2.5rem] font-black text-2xl shadow-[0_0_30px_rgba(197,164,126,0.3)] hover:scale-110 active:scale-95 transition-all"
+            >
+              תודה! ממשיכים
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* --- Header --- */}
+      <header className="px-8 py-12 flex justify-between items-center max-w-2xl mx-auto relative z-10">
+        <div className="flex items-center gap-5">
+          <div className="relative">
+            <div className="w-16 h-16 bg-gradient-to-br from-[#1a1a1c] to-[#0a0a0b] rounded-[1.8rem] shadow-2xl flex items-center justify-center text-[#c5a47e] text-2xl font-black border-2 border-[#c5a47e]/30 overflow-hidden">
+                {userProfile.name?.[0]}
+            </div>
+            <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-[#c5a47e] rounded-full border-2 border-black flex items-center justify-center text-[10px] font-black text-black">
+                {userProfile.level}
+            </div>
+          </div>
+          <div>
+            <h2 className="text-2xl font-black leading-none mb-1 text-white/90">היי {userProfile.name},</h2>
+            <div className="flex gap-3 text-[10px] font-black uppercase text-[#c5a47e] tracking-widest">
+              <span className="flex items-center gap-1"><Flame size={12} fill="currentColor" className="text-orange-500"/> {userProfile.streak} DAY STREAK</span>
+              <span className="flex items-center gap-1"><Star size={12} fill="currentColor" className="text-yellow-400"/> {userProfile.xp} XP</span>
+            </div>
+          </div>
+        </div>
+        <button onClick={() => setIsDarkMode(!isDarkMode)} className="p-4 rounded-2xl bg-[#1a1a1c] border border-white/5 text-[#c5a47e] hover:bg-white/5 transition-colors">
+            {isDarkMode ? <Sun size={20}/> : <Moon size={20}/>}
         </button>
-    </div>
+      </header>
 
-    <!-- מסך Game Over -->
-    <div id="fail-screen" class="overlay-screen" style="display: none;">
-        <h1 class="game-title" style="color: #ff0000;">GAME OVER</h1>
-        <p id="checkpoint-info" style="color: var(--primary); margin-top: 10px;">Returning to World Start</p>
-        
-        <button class="play-btn" onclick="restartFromCheckpoint()">RESTART WORLD</button>
-        
-        <div style="margin: 15px 0; opacity: 0.5;">— OR —</div>
-
-        <button id="skip-btn-fail" class="skip-btn" onclick="useSkip()">
-            SKIP LEVEL <span style="background: rgba(0,0,0,0.2); padding: 2px 8px; border-radius: 10px;">🪙 100</span>
-        </button>
-    </div>
-
-    <div id="victory-screen" class="overlay-screen" style="display: none;">
-        <h1 class="game-title" style="color: var(--gold);">ULTIMATE LEGEND</h1>
-        <p>50 Levels Conquered.</p>
-        <button class="play-btn" onclick="enterGodMode()">GOD MODE</button>
-    </div>
-
-    <div id="webcam-view"><video id="webcam" autoplay playsinline></video></div>
-    <div id="canvas-container"></div>
-
-    <div class="game-ui">
-        <div class="top-row">
-            <div class="stats-group">
-                <div class="score-box" id="score-display">0000</div>
-                <div class="coins-box" onclick="openShop()">
-                    <span class="coin-icon">🪙</span>
-                    <span id="coins-display">0</span>
-                    <span style="color: var(--gold); margin-left: 5px; font-size: 1rem;">+</span>
+      <main className="max-w-2xl mx-auto px-8 relative z-10">
+        {activeTab === 'dashboard' && (
+          <div className="space-y-10 animate-in fade-in duration-700">
+            {/* XP Card */}
+            <section className="bg-gradient-to-br from-[#151517] to-[#0a0a0b] rounded-[3.5rem] p-10 text-white relative overflow-hidden shadow-[0_30px_60px_-15px_rgba(0,0,0,0.7)] border border-white/5">
+              <div className="absolute inset-0 bg-gradient-to-br from-[#c5a47e]/5 to-transparent" />
+              <div className="relative z-10">
+                <div className="flex justify-between items-start mb-6">
+                    <div>
+                        <p className="text-[#c5a47e] font-black text-[10px] uppercase tracking-[0.2em] mb-1">PRESTIGE STATUS</p>
+                        <h3 className="text-5xl font-black tracking-tighter">{userProfile.xp} <span className="text-lg opacity-20 font-light">/ {userProfile.xpToNextLevel}</span></h3>
+                    </div>
+                    <div className="p-3 bg-white/5 rounded-2xl border border-white/5">
+                        <TrendingUp className="text-[#c5a47e]" />
+                    </div>
                 </div>
-                <div class="lives-container" id="lives-ui">
-                    <span class="heart">❤</span><span class="heart">❤</span><span class="heart">❤</span>
+                <div className="h-2 bg-black/40 rounded-full overflow-hidden border border-white/5">
+                  <div className="h-full bg-gradient-to-l from-[#c5a47e] to-[#8e7356] transition-all duration-1000 shadow-[0_0_15px_rgba(197,164,126,0.3)]" style={{width: `${(userProfile.xp/userProfile.xpToNextLevel)*100}%`}} />
                 </div>
-            </div>
-            <div class="timer-container">
-                <svg class="timer-svg">
-                    <circle class="timer-bg" cx="27.5" cy="27.5" r="25" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="6"></circle>
-                    <circle id="timer-bar" class="timer-bar" cx="27.5" cy="27.5" r="25"></circle>
-                </svg>
-                <div id="timer-text">5</div>
-            </div>
-        </div>
-        <div class="mission-header">
-            <div id="level-tag">LEVEL 1</div>
-        </div>
-    </div>
+              </div>
+            </section>
 
-    <script>
-        let scene, camera, renderer, clock, handCursor;
-        let targets = [], obstacles = [], neuralThreads = [];
-        let handTarget = new THREE.Vector3();
-        let isPinching = false, godMode = false, isLegend = false;
-        let safeBounds = { x: 50, y: 50 };
+            {/* Daily Quote */}
+            <div className="bg-white/[0.02] p-8 rounded-[2.5rem] border border-white/5 flex items-start gap-5 backdrop-blur-sm">
+                <Lightbulb className="text-[#c5a47e] shrink-0" size={24} />
+                <p className="font-medium text-slate-300 leading-relaxed italic text-lg">"{quote}"</p>
+            </div>
+
+            {/* AI Generator Section */}
+            <section className="bg-gradient-to-r from-[#1a1a1c] to-[#111112] p-8 rounded-[3rem] border border-[#c5a47e]/10 relative overflow-hidden">
+                <div className="absolute top-0 right-0 p-4 opacity-10">
+                    <Brain size={80} className="text-[#c5a47e]" />
+                </div>
+                <div className="flex justify-between items-center mb-6">
+                    <div>
+                        <h3 className="text-xl font-black text-white flex items-center gap-2">
+                             <Sparkles size={20} className="text-[#c5a47e]" />
+                             הצעות AI ואתגרים
+                        </h3>
+                        <p className="text-xs text-slate-500 font-bold mt-1">משימות מותאמות אישית לפי הקטגוריות שלך</p>
+                    </div>
+                    <button 
+                      onClick={generateNewAiSuggestions}
+                      disabled={isGeneratingAi}
+                      className="p-3 bg-white/5 rounded-2xl border border-white/10 text-[#c5a47e] hover:bg-[#c5a47e] hover:text-black transition-all disabled:opacity-50"
+                    >
+                        {isGeneratingAi ? <Loader2 size={20} className="animate-spin" /> : <RefreshCw size={20} />}
+                    </button>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {aiSuggestions.map(s => (
+                        <div key={s.id} className="bg-black/40 border border-white/5 p-5 rounded-3xl hover:border-[#c5a47e]/30 transition-all flex flex-col justify-between group">
+                            <div>
+                                <div className="flex items-center gap-2 mb-2">
+                                    <span className={`text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full border ${s.type === 'challenge' ? 'border-orange-500/50 text-orange-500' : 'border-[#c5a47e]/50 text-[#c5a47e]'}`}>
+                                        {s.type === 'challenge' ? 'אתגר' : 'משימה'}
+                                    </span>
+                                    <span className="text-[10px] text-slate-500 font-bold">+{s.xp} XP</span>
+                                </div>
+                                <h4 className="font-bold text-white/90 mb-1">{s.title}</h4>
+                                <p className="text-[10px] text-slate-600 font-medium">{s.sub}</p>
+                            </div>
+                            <button 
+                              onClick={() => acceptAiSuggestion(s)}
+                              className="mt-4 flex items-center justify-center gap-2 w-full py-2 bg-white/5 rounded-xl text-[10px] font-black hover:bg-[#c5a47e] hover:text-black transition-all"
+                            >
+                                <PlusCircle size={14} /> קבל אתגר
+                            </button>
+                        </div>
+                    ))}
+                </div>
+            </section>
+
+            {/* Tasks Section */}
+            <section className="space-y-6">
+              <div className="flex justify-between items-center mb-2 px-2">
+                <h3 className="text-2xl font-black text-white/80 tracking-tight">משימות יומיות</h3>
+                <button onClick={() => setShowAddTask(true)} className="bg-[#c5a47e] text-black px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-white hover:scale-105 transition-all">
+                    <Plus size={16} className="inline ml-1" /> הוסף משימה
+                </button>
+              </div>
+              <div className="space-y-4">
+                {tasks.map(task => (
+                  <div key={task.id} className={`group bg-[#111112] p-7 rounded-[2.8rem] flex items-center border border-white/5 shadow-xl transition-all duration-500 ${task.done ? 'opacity-20 scale-[0.98]' : 'hover:border-[#c5a47e]/30 hover:shadow-[#c5a47e]/5 hover:-translate-y-1'}`}>
+                    <button 
+                      onClick={() => toggleTask(task.id)} 
+                      disabled={task.done} 
+                      className={`w-14 h-14 rounded-3xl flex items-center justify-center ml-6 transition-all border ${task.done ? 'bg-[#c5a47e] border-[#c5a47e] text-black' : 'bg-transparent border-white/10 text-white/20 group-hover:border-[#c5a47e] group-hover:text-[#c5a47e]'}`}
+                    >
+                      {task.done ? <CheckCircle2 size={26}/> : <Zap size={26}/>}
+                    </button>
+                    <div className="flex-1">
+                      <h4 className={`font-black text-xl tracking-tight ${task.done ? 'line-through text-white/40' : 'text-white/90'}`}>{task.title}</h4>
+                      <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.15em] mt-1">{task.sub}</p>
+                    </div>
+                    {!task.done && (
+                      <button onClick={() => deleteTask(task.id)} className="p-2 text-white/5 hover:text-red-900 transition-colors">
+                        <Trash2 size={20} />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </section>
+          </div>
+        )}
+
+        {/* Tab Switcher Logic for Focus, Awards */}
+        {activeTab === 'focus' && (
+           <div className="flex flex-col items-center py-12 animate-in zoom-in duration-500">
+             <div className="relative w-80 h-80 flex items-center justify-center mb-16">
+               <svg className="absolute inset-0 w-full h-full -rotate-90">
+                 <circle cx="160" cy="160" r="145" fill="transparent" stroke="#151517" strokeWidth="10" />
+                 <circle cx="160" cy="160" r="145" fill="transparent" stroke="#c5a47e" strokeWidth="10" strokeDasharray={911} strokeDashoffset={911-(911*(timeLeft/totalTimerDuration))} strokeLinecap="round" className="transition-all duration-1000 shadow-[0_0_20px_rgba(197,164,126,0.2)]" />
+               </svg>
+               <div className="text-center">
+                 <span className="text-8xl font-black tabular-nums tracking-tighter text-white">{Math.floor(timeLeft/60)}:{String(timeLeft%60).padStart(2,'0')}</span>
+                 <p className="text-[10px] font-black text-[#c5a47e] uppercase mt-6 tracking-[0.3em]">Deep Flow State</p>
+               </div>
+             </div>
+             <div className="flex gap-8">
+               <button onClick={() => setIsTimerRunning(!isTimerRunning)} className="w-24 h-24 bg-[#c5a47e] text-black rounded-[2.5rem] flex items-center justify-center shadow-[0_20px_40px_-10px_rgba(197,164,126,0.3)] hover:scale-110 transition-all active:scale-90">
+                 {isTimerRunning ? <Pause size={36}/> : <Play size={36} fill="currentColor" className="ml-1"/>}
+               </button>
+               <button onClick={() => { setTimeLeft(1500); setIsTimerRunning(false); }} className="w-24 h-24 bg-white/5 border border-white/5 text-white/20 rounded-[2.5rem] flex items-center justify-center hover:text-white transition-all"><RotateCcw size={36}/></button>
+             </div>
+          </div>
+        )}
         
-        let gameState = { 
-            level: 1, 
-            checkpointLevel: 1, 
-            lives: 3,
-            score: 0, 
-            coins: 0,
-            active: false, 
-            timeLeft: 5 
-        };
+        {activeTab === 'awards' && (
+            <div className="space-y-10 animate-in slide-in-from-bottom-10 duration-500 text-center py-10">
+                <Trophy className="w-24 h-24 text-[#c5a47e] mx-auto mb-6 drop-shadow-[0_0_20px_rgba(197,164,126,0.2)]" />
+                <h3 className="text-4xl font-black tracking-tighter">הישגי יוקרה</h3>
+                <p className="text-slate-500 font-bold max-w-xs mx-auto">המשך להתקדם ב-MindFlow כדי לפתוח עיטורים חדשים לרזומה שלך.</p>
+            </div>
+        )}
+      </main>
 
-        function updateSafeBounds() {
-            if (!camera) return;
-            const aspect = window.innerWidth / window.innerHeight;
-            const h = 2 * Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2) * camera.position.z;
-            safeBounds.x = (h * aspect / 2) * 0.75;
-            safeBounds.y = (h / 2) * 0.75;
-        }
+      {/* Nav */}
+      <nav className="fixed bottom-0 left-0 right-0 p-10 z-30">
+        <div className="max-w-md mx-auto bg-black/60 backdrop-blur-3xl border border-white/5 rounded-[3.5rem] shadow-2xl px-10 py-7 flex justify-between items-center">
+          {[
+            { id: 'dashboard', icon: BarChart3 },
+            { id: 'focus', icon: Zap },
+            { id: 'awards', icon: Trophy }
+          ].map(item => (
+            <button key={item.id} onClick={() => setActiveTab(item.id)} className={`relative transition-all duration-500 ${activeTab === item.id ? 'text-[#c5a47e] scale-125' : 'text-white/10 hover:text-white/30'}`}>
+              <item.icon size={28} />
+              {activeTab === item.id && <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 w-1.5 h-1.5 bg-[#c5a47e] rounded-full shadow-[0_0_10px_#c5a47e]" />}
+            </button>
+          ))}
+        </div>
+      </nav>
 
-        function initThree() {
-            scene = new THREE.Scene();
-            camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 1, 2000);
-            camera.position.z = 250;
-            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-            document.getElementById('canvas-container').appendChild(renderer.domElement);
-            scene.add(new THREE.AmbientLight(0xffffff, 0.4));
-            const pLight = new THREE.PointLight(0x00f2ff, 2.5, 1000);
-            pLight.position.set(0, 100, 200);
-            scene.add(pLight);
+      {/* --- ADD TASK MODAL --- */}
+      {showAddTask && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-xl p-6 animate-in fade-in duration-300">
+            <div className="bg-[#111112] border border-[#c5a47e]/20 rounded-[3rem] p-12 w-full max-w-sm shadow-2xl text-white">
+              <h3 className="text-3xl font-black mb-10 text-center tracking-tighter">יצירת משימה</h3>
+              <div className="space-y-6">
+                <input 
+                  autoFocus 
+                  value={newTaskTitle}
+                  onChange={(e) => setNewTaskTitle(e.target.value)}
+                  placeholder="מה היעד?" 
+                  className="w-full bg-white/5 p-6 rounded-[1.8rem] outline-none font-bold border border-white/5 focus:border-[#c5a47e]/50 transition-all text-xl" 
+                />
+                <input 
+                  value={newTaskSub}
+                  onChange={(e) => setNewTaskSub(e.target.value)}
+                  placeholder="תיאור קצר..." 
+                  className="w-full bg-white/5 p-6 rounded-[1.8rem] outline-none font-bold border border-white/5 focus:border-[#c5a47e]/50 transition-all text-sm opacity-60" 
+                />
+                <div className="pt-4">
+                  <button 
+                    onClick={handleCreateTask}
+                    className="w-full bg-[#c5a47e] text-black p-6 rounded-[2rem] font-black text-xl shadow-2xl hover:bg-white hover:scale-105 transition-all active:scale-95"
+                  >
+                    שמור במערכת
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+      )}
 
-            handCursor = new THREE.Mesh(
-                new THREE.TorusGeometry(12, 2.5, 16, 32),
-                new THREE.MeshBasicMaterial({ color: 0x00f2ff, transparent: true, opacity: 0.8 })
-            );
-            scene.add(handCursor);
-            updateSafeBounds();
-            clock = new THREE.Clock();
-            requestAnimationFrame(animate);
-        }
+      <footer className="mt-24 pb-12 text-center opacity-20 relative z-10">
+          <p className="text-[10px] font-black uppercase tracking-[0.4em] mb-1">MindFlow Prestige System</p>
+          <p className="text-[10px] font-bold">Curated by Eliav & Dekel</p>
+      </footer>
+    </div>
+  );
+};
 
-        async function startGame() {
-            document.getElementById('boot-screen').style.display = 'none';
-            if(!scene) initThree();
-            const hands = new Hands({ locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}` });
-            hands.setOptions({ maxNumHands: 1, modelComplexity: 1, minDetectionConfidence: 0.5 });
-            hands.onResults(onHandResults);
-            const video = document.getElementById('webcam');
-            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
-            video.srcObject = stream;
-            new Camera(video, { onFrame: async () => await hands.send({image: video}), width: 640, height: 480 }).start();
-            setupLevel();
-        }
-
-        function onHandResults(res) {
-            if (!gameState.active || !res.multiHandLandmarks) return;
-            const lm = res.multiHandLandmarks[0];
-            if(lm) {
-                handTarget.x = (0.5 - lm[8].x) * (safeBounds.x * 2.8); 
-                handTarget.y = (0.5 - lm[8].y) * (safeBounds.y * 2.8);
-                const dist = Math.sqrt(Math.pow(lm[8].x-lm[4].x, 2) + Math.pow(lm[8].y-thumbFix(lm[4].y), 2));
-                if(dist < 0.08) { if(!isPinching) checkCollision(); isPinching = true; } else isPinching = false;
-            }
-        }
-        function thumbFix(y) { return y; } // Helper for mapping
-
-        function spawnEntities(lvl) {
-            targets.concat(obstacles).forEach(e => scene.remove(e));
-            neuralThreads.forEach(t => scene.remove(t));
-            targets = []; obstacles = []; neuralThreads = [];
-
-            // Checkpoint Logic & World Bonus
-            if (lvl > 1 && (lvl - 1) % 10 === 0 && gameState.checkpointLevel < lvl) {
-                gameState.checkpointLevel = lvl;
-                addCoins(100, true); // World Completion Bonus
-            }
-
-            const isBoss = lvl % 5 === 0;
-            const count = isBoss ? 1 : Math.min(4 + Math.floor(lvl / 1.5), 30);
-            const mines = lvl < 4 ? 0 : Math.min(Math.floor(lvl / 3.5), 12);
-            const speed = 0.25 + (lvl * 0.12);
-            const color = new THREE.Color().setHSL((lvl * 0.13) % 1, 0.8, 0.5);
-
-            for(let i=0; i<count; i++) {
-                const geo = isBoss ? new THREE.TorusKnotGeometry(35, 12, 128, 16) : new THREE.IcosahedronGeometry(18, 0);
-                const mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 0.5 }));
-                mesh.position.set((Math.random()-0.5)*safeBounds.x*1.8, (Math.random()-0.5)*safeBounds.y*1.8, 0);
-                mesh.userData = { vel: new THREE.Vector3((Math.random()-0.5)*speed, (Math.random()-0.5)*speed, 0) };
-                scene.add(mesh); targets.push(mesh);
-
-                const lineGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);
-                const line = new THREE.Line(lineGeo, new THREE.LineBasicMaterial({ color: 0x00f2ff, transparent: true, opacity: 0.15 }));
-                scene.add(line);
-                neuralThreads.push({ line, target: mesh });
-            }
-
-            if(!godMode) {
-                for(let i=0; i<mines; i++) {
-                    const mesh = new THREE.Mesh(new THREE.OctahedronGeometry(15, 0), new THREE.MeshStandardMaterial({ color: 0xff0000 }));
-                    mesh.position.set((Math.random()-0.5)*safeBounds.x*1.8, (Math.random()-0.5)*safeBounds.y*1.8, 0);
-                    mesh.userData = { vel: new THREE.Vector3((Math.random()-0.5)*speed*1.2, (Math.random()-0.5)*speed*1.2, 0), mine: true };
-                    scene.add(mesh); obstacles.push(mesh);
-                }
-            }
-        }
-
-        function addCoins(amount, isWorldBonus) {
-            gameState.coins += amount;
-            document.getElementById('coins-display').innerText = gameState.coins;
-            if(isWorldBonus) {
-                showWorldBonusMsg();
-            }
-        }
-
-        function showWorldBonusMsg() {
-            const div = document.createElement('div');
-            div.style.position = 'fixed';
-            div.style.top = '50%'; div.style.left = '50%'; div.style.transform = 'translate(-50%, -50%)';
-            div.style.color = 'var(--gold)'; div.style.fontFamily = 'Luckiest Guy'; div.style.fontSize = '2rem';
-            div.style.zIndex = '1001'; div.innerText = "WORLD BONUS: +100 COINS!";
-            document.body.appendChild(div);
-            gsap.from(div, { scale: 0, opacity: 0, duration: 0.5, ease: "back.out" });
-            gsap.to(div, { y: "-=100", opacity: 0, duration: 1, delay: 1.5, onComplete: () => div.remove() });
-        }
-
-        function setupLevel() {
-            updateSafeBounds();
-            gameState.timeLeft = 5;
-            gameState.active = true;
-            document.getElementById('level-tag').innerText = `LEVEL ${gameState.level}`;
-            updateLivesUI();
-            spawnEntities(gameState.level);
-        }
-
-        function checkCollision() {
-            targets.forEach((t, i) => {
-                if(t.position.distanceTo(handCursor.position) < 50) {
-                    targets.splice(i, 1);
-                    const tIdx = neuralThreads.findIndex(th => th.target === t);
-                    if(tIdx !== -1) { scene.remove(neuralThreads[tIdx].line); neuralThreads.splice(tIdx, 1); }
-                    scene.remove(t);
-                    gameState.score += 150;
-                    createExplosion(t.position, t.material.color);
-                    if(targets.length === 0) {
-                        if(gameState.level === 50) triggerVictory();
-                        else { gameState.level++; setupLevel(); }
-                    }
-                }
-            });
-            obstacles.forEach(o => {
-                if(o.position.distanceTo(handCursor.position) < 22) triggerFail("MINE DETONATED");
-            });
-        }
-
-        function triggerFail(reason) {
-            if(godMode) return;
-            gameState.active = false;
-            gameState.lives--;
-            updateLivesUI();
-
-            const skipLife = document.getElementById('skip-btn-life');
-            const skipFail = document.getElementById('skip-btn-fail');
-            const canSkip = gameState.coins >= 100;
-            skipLife.disabled = !canSkip; skipFail.disabled = !canSkip;
-
-            if (gameState.lives > 0) {
-                document.getElementById('lives-left-msg').innerText = `${gameState.lives} Lives Remaining`;
-                document.getElementById('life-lost-screen').style.display = 'flex';
-            } else {
-                document.getElementById('checkpoint-info').innerText = `World Reset: Back to Level ${gameState.checkpointLevel}`;
-                document.getElementById('fail-screen').style.display = 'flex';
-            }
-        }
-
-        function useSkip() {
-            if(gameState.coins >= 100) {
-                gameState.coins -= 100;
-                document.getElementById('coins-display').innerText = gameState.coins;
-                gameState.level++;
-                gameState.lives = 3;
-                document.getElementById('life-lost-screen').style.display = 'none';
-                document.getElementById('fail-screen').style.display = 'none';
-                setupLevel();
-            }
-        }
-
-        function buyCoins(amount) {
-            addCoins(amount, false);
-            closeShop();
-            confetti({ particleCount: 50, spread: 50, colors: ['#ffcc00'] });
-        }
-
-        function openShop() { document.getElementById('shop-screen').style.display = 'flex'; }
-        function closeShop() { document.getElementById('shop-screen').style.display = 'none'; }
-        function retryLevel() { document.getElementById('life-lost-screen').style.display = 'none'; setupLevel(); }
-        function restartFromCheckpoint() { gameState.level = gameState.checkpointLevel; gameState.lives = 3; document.getElementById('fail-screen').style.display = 'none'; setupLevel(); }
-        function enterGodMode() { godMode = true; document.getElementById('victory-screen').style.display = 'none'; gameState.level = 1; setupLevel(); }
-        function updateLivesUI() { const hearts = document.querySelectorAll('.heart'); hearts.forEach((h, i) => h.style.opacity = i >= gameState.lives ? '0.2' : '1'); }
-
-        function createExplosion(pos, color) {
-            for(let i=0; i<15; i++) {
-                const p = new THREE.Mesh(new THREE.BoxGeometry(3,3,3), new THREE.MeshBasicMaterial({ color }));
-                p.position.copy(pos); scene.add(p);
-                const d = new THREE.Vector3((Math.random()-0.5)*150, (Math.random()-0.5)*150, (Math.random()-0.5)*150);
-                gsap.to(p.position, { x: "+="+d.x, y: "+="+d.y, z: "+="+d.z, duration: 0.5 });
-                gsap.to(p.scale, { x: 0, y: 0, z: 0, duration: 0.5, onComplete: () => scene.remove(p) });
-            }
-        }
-
-        function triggerVictory() {
-            gameState.active = false; isLegend = true;
-            handCursor.material.color.setHex(0xffcc00);
-            confetti({ particleCount: 200, spread: 90, origin: { y: 0.6 } });
-            document.getElementById('victory-screen').style.display = 'flex';
-        }
-
-        function animate() {
-            requestAnimationFrame(animate);
-            if(gameState.active && !godMode) {
-                gameState.timeLeft -= 1/60;
-                const perc = gameState.timeLeft / 5;
-                document.getElementById('timer-bar').style.strokeDashoffset = 157 * (1 - perc);
-                document.getElementById('timer-text').innerText = Math.max(0, Math.ceil(gameState.timeLeft));
-                if(gameState.timeLeft <= 0) triggerFail("TIME EXPIRED");
-            }
-            if(handCursor) {
-                handCursor.position.lerp(handTarget, 0.2);
-                handCursor.rotation.z += 0.05;
-                neuralThreads.forEach(th => {
-                    const pos = new Float32Array([handCursor.position.x, handCursor.position.y, handCursor.position.z, th.target.position.x, th.target.position.y, th.target.position.z]);
-                    th.line.geometry.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-                    th.line.material.opacity = Math.max(0.1, 1 - (handCursor.position.distanceTo(th.target.position) / 300));
-                });
-            }
-            [...targets, ...obstacles].forEach(e => {
-                e.position.add(e.userData.vel);
-                if(Math.abs(e.position.x) > safeBounds.x) e.userData.vel.x *= -1;
-                if(Math.abs(e.position.y) > safeBounds.y) e.userData.vel.y *= -1;
-                e.rotation.x += 0.02; e.rotation.y += 0.02;
-            });
-            renderer.render(scene, camera);
-            document.getElementById('score-display').innerText = gameState.score.toString().padStart(4, '0');
-        }
-
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight); updateSafeBounds();
-        });
-    </script>
-</body>
-</html>
-
+export default App;
